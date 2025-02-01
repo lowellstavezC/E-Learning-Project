@@ -26,7 +26,12 @@ SECRET_KEY = 'django-insecure-k3&%$(#f1g7(#6yu!i+vii)n31%ep6m0(9834*-@&r&1efu-hp
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '3eb8-112-208-72-180.ngrok-free.app',
+    '.ngrok-free.app',
+]
 
 
 # Application definition
@@ -139,3 +144,28 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'your-email@gmail.com'  # Your email
 EMAIL_HOST_PASSWORD = 'your-app-password'  # Your email app password
+
+# Add or update these settings
+LOGIN_URL = 'login'  # Remove 'accounts/' from the path
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'login'
+
+# Make sure these middleware classes are present and in this order
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',  # This must come before CSRF
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# Make sure you have these settings
+CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+# Make sure your ALLOWED_HOSTS includes your domain
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']

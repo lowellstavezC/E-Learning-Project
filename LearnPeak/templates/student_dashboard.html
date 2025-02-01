@@ -24,8 +24,8 @@
                                 <h3 class="text-lg font-semibold text-gray-800">{{ enrollment.course.title }}</h3>
                                 <p class="text-gray-600 text-sm mt-1">Instructor: {{ enrollment.course.teacher.user.name }}</p>
                                 <div class="mt-4">
-                                    <a href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                                        Continue Learning
+                                    <a href="{% url 'LearnPeak:course_detail' enrollment.course.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                                        View Course
                                     </a>
                                 </div>
                             </div>
@@ -81,4 +81,4 @@
         </div>
     </main>
 </div>
-{% endblock %} 
+{% endblock %}
