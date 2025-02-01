@@ -1,257 +1,352 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout, authenticate
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.shortcuts import render, redirect
 from django.contrib import messages
-from .forms import UserRegistrationForm, LoginForm, CourseForm, LessonForm, MaterialForm, QuizForm, AssignmentForm, GradeSubmissionForm, LiveSessionForm
-from .models import User, Role, Student, Teacher, Course, Enrollment, Discussion, Lesson, Material, Quiz, Submission, LiveSession
+from django.contrib.auth import login as auth_login, authenticate, logout as auth_logout
 from django.db import transaction
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_protect
+from .models import User, Role, Student, Teacher, Course, Enrollment, Assignment, Quiz, Discussion, Grades, LiveSession, CourseCategory, SystemLog, Certificate
+from django.utils import timezone
+from datetime import timedelta
 
-# Create your views here.
-def index(request):
-    return render(request, 'index.html')
+from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
+from .decorators import admin_only
+from django.contrib.auth import logout
+from django.views.decorators.cache import cache_page
+from django.db.models import Prefetch, Avg, Count
+from django.core.cache import cache
+from django.db import connection
+from django.conf import settings
+import logging
+from django.db.models.functions import TruncDate
 
-def home(request):
-    return render(request, 'index.html')
+User = get_user_model()
 
-@csrf_protect
+logger = logging.getLogger(__name__)
+
+def get_started(request):
+    return render(request, 'get_started.html')
+
 def register(request):
     if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            
-            # Create corresponding role-based profile
-            if user.role.role_name.lower() == 'student':
-                Student.objects.create(
-                    user=user,
-                    course_of_study='Not specified'  # Default value
-                )
-            elif user.role.role_name.lower() == 'teacher':
-                Teacher.objects.create(
-                    user=user,
-                    department='Not specified'  # Default value
-                )
-            
-            messages.success(request, 'Registration successful. Please login.')
-            return redirect('login')
-    else:
-        form = UserRegistrationForm()
-    return render(request, 'register.html', {'form': form})
-
-@csrf_protect
-def user_login(request):
-    if request.user.is_authenticated:
-        if hasattr(request.user, 'role') and request.user.role:
-            if request.user.role.role_name == 'teacher':
-                return redirect('/teacher/dashboard/')
-            elif request.user.role.role_name == 'student':
-                return redirect('/student/dashboard/')
-        return redirect('/dashboard/')
-
-    if request.method == 'POST':
-        username = request.POST.get('username')
+        email = request.POST.get('email')
         password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
+        confirm_password = request.POST.get('confirm_password')
+        user_type = request.POST.get('user_type')
+        name = request.POST.get('name')
+
+        if password != confirm_password:
+            messages.error(request, 'Passwords do not match.')
+            return redirect('LearnPeak:register')
+
+        try:
+            with transaction.atomic():
+                # Check if user already exists
+                if User.objects.filter(email=email).exists():
+                    messages.error(request, 'Email already registered.')
+                    return redirect('LearnPeak:register')
+
+                # Get or create the appropriate role
+                role, _ = Role.objects.get_or_create(
+                    role_name=user_type,
+                    defaults={'created_at': timezone.now()}
+                )
+
+                # Create new user
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=password,
+                    name=name,
+                    role=role
+                )
+
+                # Create the role-specific profile
+                if user_type == 'student':
+                    Student.objects.create(
+                        user=user,
+                        course_of_study=''
+                    )
+                elif user_type == 'teacher':
+                    Teacher.objects.create(
+                        user=user,
+                        department=''  # Empty string for department
+                    )
+
+                messages.success(request, 'Registration successful! Please login.')
+                return redirect('LearnPeak:login')
+            
+        except Exception as e:
+            messages.error(request, f'Registration failed: {str(e)}')
+            return redirect('LearnPeak:register')
+    
+    return render(request, 'register.html')
+
+def login(request):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        
+        user = authenticate(request, username=email, password=password)
         
         if user is not None:
-            login(request, user)
-            if hasattr(user, 'role') and user.role:
-                if user.role.role_name == 'teacher':
-                    return redirect('/teacher/dashboard/')
-                elif user.role.role_name == 'student':
-                    return redirect('/student/dashboard/')
-            else:
-                messages.error(request, 'User role not assigned. Please contact administrator.')
-                return redirect('/login/')
+            auth_login(request, user)
+            # Check user role and redirect accordingly
+            if user.role.role_name == 'student':
+                return redirect('LearnPeak:student_dashboard')
+            elif user.role.role_name == 'teacher':
+                return redirect('LearnPeak:teacher_dashboard')
         else:
-            messages.error(request, 'Invalid username or password')
-    
+            messages.error(request, 'Invalid email or password.')
+            
     return render(request, 'login.html')
 
-@csrf_protect
-def user_logout(request):
-    logout(request)
-    return redirect('/login/')
-
-def is_teacher(user):
-    return user.is_authenticated and user.role == 'teacher'
-
-@login_required(login_url='login')
-@user_passes_test(is_teacher, login_url='login')
-def teacher_dashboard(request):
-    if not is_teacher(request.user):
-        messages.error(request, 'You do not have permission to access the teacher dashboard.')
-        return redirect('home')
-    
-    courses = Course.objects.filter(teacher=request.user)
-    return render(request, 'teacherdashboard.html', {
-        'courses': courses
-    })
-
-# Add student dashboard view
-def is_student(user):
-    return user.is_authenticated and user.role == 'student'
-
-@login_required(login_url='login')
-@user_passes_test(is_student, login_url='login')
+@cache_page(60 * 15)  # Cache for 15 minutes
 def student_dashboard(request):
-    if not is_student(request.user):
-        messages.error(request, 'You do not have permission to access the student dashboard.')
-        return redirect('home')
+    try:
+        # Get student
+        student = request.user.student
+        
+        # Try to get data from cache
+        cache_key = f'student_dashboard_{student.id}'
+        dashboard_data = cache.get(cache_key)
+        
+        if not dashboard_data:
+            # Use select_for_update to prevent race conditions
+            with connection.cursor() as cursor:
+                # Get enrolled courses with optimized query
+                enrolled_courses = (Course.objects
+                    .filter(enrollment__student=student)
+                    .select_related('teacher')
+                    .prefetch_related(
+                        Prefetch('assignment_set', 
+                                queryset=Assignment.objects.select_related('course')),
+                        'lesson_set'
+                    )
+                    .annotate(assignment_count=Count('assignment'))
+                    .only('id', 'title', 'description', 'teacher__user__name')
+                )
+
+                # Get pending assignments efficiently
+                pending_assignments = (Assignment.objects
+                    .filter(
+                        course__enrollment__student=student,
+                        deadline__gte=timezone.now()
+                    )
+                    .select_related('course')
+                    .only('id', 'title', 'deadline', 'course__title')
+                    .order_by('deadline')[:5]
+                )
+
+                # Get completed courses with minimal fields
+                completed_courses = (Course.objects
+                    .filter(
+                        enrollment__student=student,
+                        enrollment__status='completed'
+                    )
+                    .distinct()
+                    .only('id', 'title')
+                )
+
+                # Get average grade efficiently
+                avg_grade = (Grades.objects
+                    .filter(student=student)
+                    .aggregate(avg=Avg('grade'))
+                )['avg']
+
+                dashboard_data = {
+                    'enrolled_courses': enrolled_courses,
+                    'pending_assignments': pending_assignments,
+                    'completed_courses': completed_courses,
+                    'avg_grade': round(avg_grade, 1) if avg_grade else None,
+                }
+                
+                # Cache with reasonable timeout
+                cache.set(cache_key, dashboard_data, 60 * 15)  # 15 minutes
+
+        # Add performance monitoring
+        if settings.DEBUG:
+            query_count = len(connection.queries)
+            logger.debug(f"Dashboard queries: {query_count}")
+
+        return render(request, 'student_dashboard.html', dashboard_data)
+
+    except Exception as e:
+        logger.error(f"Dashboard error: {str(e)}")
+        return render(request, 'error.html', {'message': 'Unable to load dashboard'})
+
+@login_required
+def teacher_dashboard(request):
+    # Get the teacher profile
+    teacher = request.user.teacher
+
+    # Get courses created by this teacher
+    courses = Course.objects.filter(teacher=teacher)
+
+    # Get all assignments from teacher's courses
+    assignments = Assignment.objects.filter(course__in=courses).order_by('-created_at')
+
+    # Get all quizzes from teacher's courses
+    quizzes = Quiz.objects.filter(course__in=courses).order_by('-created_at')
+
+    # Get upcoming live sessions
+    live_sessions = LiveSession.objects.filter(
+        course__in=courses,
+        schedule__gte=timezone.now()
+    ).order_by('schedule')
+
+    # Get recent discussions in teacher's courses
+    discussions = Discussion.objects.filter(
+        course__in=courses
+    ).order_by('-created_at')[:5]
+
+    # Get recent grades given
+    recent_grades = Grades.objects.filter(
+        course__in=courses
+    ).order_by('-updated_at')[:5]
+
+    # Get total number of enrolled students across all courses
+    total_students = Enrollment.objects.filter(course__in=courses).count()
+
+    context = {
+        'courses': courses,
+        'assignments': assignments,
+        'quizzes': quizzes,
+        'live_sessions': live_sessions,
+        'discussions': discussions,
+        'recent_grades': recent_grades,
+        'total_students': total_students,
+    }
     
-    # Get student's enrolled courses
-    enrolled_courses = Course.objects.filter(students=request.user)
-    return render(request, 'studentdashboard.html', {
-        'courses': enrolled_courses
-    })
+    return render(request, 'teacher_dashboard.html', context)
 
-@login_required
-def dashboard(request):
-    if hasattr(request.user, 'student'):
-        return redirect('LearnPeak:student_dashboard')
-    elif hasattr(request.user, 'teacher'):
-        return redirect('LearnPeak:teacher_dashboard')
-    return redirect('LearnPeak:home')
+def logout(request):
+    auth_logout(request)
+    return redirect('LearnPeak:get_started')
 
-@login_required
-def enroll_course(request, course_id):
-    course = get_object_or_404(Course, id=course_id)
-    Enrollment.objects.create(student=request.user.student, course=course)
-    messages.success(request, 'Enrolled in course successfully.')
-    return redirect('LearnPeak:student_dashboard')
-
-@login_required
-def course_discussions(request, course_id):
-    course = get_object_or_404(Course, id=course_id)
-    discussions = Discussion.objects.filter(course=course)
+def login_view(request):
     if request.method == 'POST':
-        content = request.POST.get('content')
-        Discussion.objects.create(course=course, user=request.user, content=content)
-        messages.success(request, 'Discussion posted successfully.')
-        return redirect('LearnPeak:course_discussions', course_id=course.id)
-    return render(request, 'course_discussions.html', {'course': course, 'discussions': discussions})
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        
+        try:
+            # Try to get the user by email
+            user = authenticate(username=email, password=password)
+            
+            if user is not None:
+                auth_login(request, user)
+                
+                # Redirect based on user type
+                if user.is_superuser:
+                    return redirect('LearnPeak:admin_dashboard')
+                elif hasattr(user, 'teacher'):
+                    return redirect('LearnPeak:teacher_dashboard')
+                elif hasattr(user, 'student'):
+                    return redirect('LearnPeak:student_dashboard')
+                else:
+                    messages.error(request, 'Invalid user type')
+                    return redirect('LearnPeak:login')
+            else:
+                messages.error(request, 'Invalid email or password')
+                return redirect('LearnPeak:login')
+                
+        except Exception as e:
+            messages.error(request, 'An error occurred during login')
+            return redirect('LearnPeak:login')
+            
+    return render(request, 'login.html')
 
-@login_required
-@user_passes_test(is_teacher)
-def course_create(request):
+def register_view(request):
     if request.method == 'POST':
-        form = CourseForm(request.POST, request.FILES)
-        if form.is_valid():
-            course = form.save(commit=False)
-            course.teacher = request.user
-            course.save()
-            messages.success(request, 'Course created successfully!')
-            return redirect('course_detail', course.id)
-    else:
-        form = CourseForm()
-    return render(request, 'courses/teacher/course_form.html', {'form': form})
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
+        user_type = request.POST.get('user_type')
 
-@login_required
-@user_passes_test(is_teacher)
-def lesson_create(request, course_id):
-    course = get_object_or_404(Course, id=course_id, teacher=request.user)
-    if request.method == 'POST':
-        form = LessonForm(request.POST)
-        if form.is_valid():
-            lesson = form.save(commit=False)
-            lesson.course = course
-            lesson.save()
-            return redirect('course_detail', course.id)
-    else:
-        form = LessonForm()
-    return render(request, 'courses/teacher/lesson_form.html', {
-        'form': form,
-        'course': course
-    })
+        # Validate passwords match
+        if password != confirm_password:
+            messages.error(request, 'Passwords do not match.')
+            return render(request, 'register.html')
 
-@login_required
-@user_passes_test(is_teacher)
-def material_upload(request, lesson_id):
-    lesson = get_object_or_404(Lesson, id=lesson_id, course__teacher=request.user)
-    if request.method == 'POST':
-        form = MaterialForm(request.POST, request.FILES)
-        if form.is_valid():
-            material = form.save(commit=False)
-            material.lesson = lesson
-            material.save()
-            return JsonResponse({'success': True})
-    else:
-        form = MaterialForm()
-    return render(request, 'courses/teacher/material_form.html', {
-        'form': form,
-        'lesson': lesson
-    })
+        # Check if user already exists
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Email already registered.')
+            return render(request, 'register.html')
 
-@login_required
-@user_passes_test(is_teacher)
-def quiz_create(request, course_id):
-    course = get_object_or_404(Course, id=course_id, teacher=request.user)
-    if request.method == 'POST':
-        form = QuizForm(request.POST)
-        if form.is_valid():
-            quiz = form.save(commit=False)
-            quiz.course = course
-            quiz.save()
-            return redirect('quiz_add_questions', quiz.id)
-    else:
-        form = QuizForm()
-    return render(request, 'courses/teacher/quiz_form.html', {
-        'form': form,
-        'course': course
-    })
+        try:
+            # Create the user
+            user = User.objects.create_user(
+                username=email,  # Using email as username
+                email=email,
+                password=password
+            )
+            user.name = name  # Assuming your User model has a name field
+            user.save()
 
-@login_required
-@user_passes_test(is_teacher)
-def assignment_create(request, course_id):
-    course = get_object_or_404(Course, id=course_id, teacher=request.user)
-    if request.method == 'POST':
-        form = AssignmentForm(request.POST)
-        if form.is_valid():
-            assignment = form.save(commit=False)
-            assignment.course = course
-            assignment.save()
-            return redirect('course_detail', course.id)
-    else:
-        form = AssignmentForm()
-    return render(request, 'courses/teacher/assignment_form.html', {
-        'form': form,
-        'course': course
-    })
+            # Create Student or Teacher profile based on user_type
+            if user_type == 'student':
+                Student.objects.create(user=user)
+            elif user_type == 'teacher':
+                Teacher.objects.create(user=user)
 
-@login_required
-@user_passes_test(is_teacher)
-def grade_submission(request, submission_id):
-    submission = get_object_or_404(Submission, id=submission_id, 
-                                 assignment__course__teacher=request.user)
-    if request.method == 'POST':
-        form = GradeSubmissionForm(request.POST, instance=submission)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Grade submitted successfully!')
-            return redirect('assignment_submissions', submission.assignment.id)
-    else:
-        form = GradeSubmissionForm(instance=submission)
-    return render(request, 'courses/teacher/grade_submission.html', {
-        'form': form,
-        'submission': submission
-    })
+            messages.success(request, 'Registration successful! Please login.')
+            return redirect('LearnPeak:login')
 
+        except Exception as e:
+            messages.error(request, f'Error creating account: {str(e)}')
+            return render(request, 'register.html')
+
+    return render(request, 'register.html')
+
+# You can remove or keep the admin_dashboard view function
 @login_required
-@user_passes_test(is_teacher)
-def live_session_create(request, course_id):
-    course = get_object_or_404(Course, id=course_id, teacher=request.user)
+@admin_only
+def admin_dashboard(request):
+    # Get the date 7 days ago
+    seven_days_ago = timezone.now() - timedelta(days=7)
+    
+    context = {
+        'total_users': User.objects.count(),
+        'teacher_count': Teacher.objects.count(),
+        'student_count': Student.objects.count(),
+        'course_count': Course.objects.count(),
+        'course_categories': CourseCategory.objects.count(),
+        'recent_activities': SystemLog.objects.count(),
+        'recent_users': User.objects.select_related('teacher', 'student').order_by('-date_joined')[:5],
+        'system_logs': SystemLog.objects.order_by('-timestamp')[:5],
+        'categories': CourseCategory.objects.all(),
+        'active_users_today': User.objects.filter(last_login__date=timezone.now().date()).count(),
+        'weekly_enrollments': Enrollment.objects.filter(
+            enrollment_date__gte=seven_days_ago  # Changed from created_at to enrollment_date
+        ).annotate(
+            date=TruncDate('enrollment_date')  # Changed from created_at to enrollment_date
+        ).values('date').annotate(
+            count=Count('id')
+        ).order_by('date'),
+        'recent_enrollments': Enrollment.objects.select_related(
+            'student__user', 
+            'course'
+        ).order_by('-enrollment_date')[:5],  # Changed from created_at to enrollment_date
+    }
+    
+    return render(request, 'admin_dashboard.html', context)
+
+def delete_user(request, user_id):
+    if not request.user.is_superuser:
+        messages.error(request, 'You do not have permission to delete users.')
+        return redirect('LearnPeak:admin_dashboard')
+        
     if request.method == 'POST':
-        form = LiveSessionForm(request.POST)
-        if form.is_valid():
-            session = form.save(commit=False)
-            session.course = course
-            session.save()
-            return redirect('course_detail', course.id)
-    else:
-        form = LiveSessionForm()
-    return render(request, 'courses/teacher/live_session_form.html', {
-        'form': form,
-        'course': course
-    })
+        try:
+            user = User.objects.get(id=user_id)
+            email = user.email
+            user.delete()
+            messages.success(request, f'User {email} has been deleted successfully.')
+        except User.DoesNotExist:
+            messages.error(request, 'User not found.')
+        except Exception as e:
+            messages.error(request, f'Error deleting user: {str(e)}')
+    return redirect('LearnPeak:admin_dashboard')
+
+def logout_view(request):
+    logout(request)
+    return redirect('LearnPeak:login')
