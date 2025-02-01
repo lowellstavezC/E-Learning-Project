@@ -1,76 +1,57 @@
 from django.contrib import admin
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from datetime import timedelta
+from .decorators import admin_only
 from .models import (
-    Role, User, Admin, Teacher, Student,
-    CourseCategory, Course, Lesson,
-    Quiz, Assignment, LiveSession,
-    Discussion, Enrollment, Grades,
-    Certificate, Notification, SystemLog
+    Role, User, Admin, Teacher, Student, 
+    CourseCategory, Course, Lesson, Quiz, 
+    Assignment, LiveSession, Discussion, 
+    Enrollment, Grades, Certificate, 
+    Notification, SystemLog
 )
 
-@admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    list_display = ('email', 'name', 'role', 'created_at')
-    search_fields = ('email', 'name')
-    list_filter = ('role', 'created_at')
+# Admin Dashboard View
+@login_required
+@admin_only
+def admin_dashboard(request):
+    context = {
+        'total_users': User.objects.count(),
+        'teacher_count': Teacher.objects.count(),
+        'student_count': Student.objects.count(),
+        'active_courses': Course.objects.filter(is_active=True).count(),
+        'course_categories': CourseCategory.objects.count(),
+        'recent_activities': SystemLog.objects.count(),
+        'recent_users': User.objects.order_by('-created_at')[:5],
+        'system_logs': SystemLog.objects.order_by('-timestamp')[:5],
+        'categories': CourseCategory.objects.all(),
+        'active_users_today': User.objects.filter(last_login__date=timezone.now().date()).count(),
+        'weekly_enrollments': Enrollment.objects.filter(
+            created_at__gte=timezone.now() - timedelta(days=7)
+        ).count(),
+        'monthly_completions': Certificate.objects.filter(
+            issued_date__gte=timezone.now() - timedelta(days=30)
+        ).count(),
+        'avg_course_rating': 4.5,  # You can implement actual rating logic
+    }
+    return render(request, 'admin_dashboard.html', context)
 
-@admin.register(Role)
-class RoleAdmin(admin.ModelAdmin):
-    list_display = ('role_name', 'created_at')
-
-@admin.register(Teacher)
-class TeacherAdmin(admin.ModelAdmin):
-    list_display = ('user', 'department', 'created_at')
-
-@admin.register(Student)
-class StudentAdmin(admin.ModelAdmin):
-    list_display = ('user', 'course_of_study', 'created_at')
-
-@admin.register(CourseCategory)
-class CourseCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'created_at')
-
-@admin.register(Course)
-class CourseAdmin(admin.ModelAdmin):
-    list_display = ('title', 'category', 'teacher', 'created_at')
-    search_fields = ('title', 'description')
-    list_filter = ('category', 'created_at')
-
-@admin.register(Lesson)
-class LessonAdmin(admin.ModelAdmin):
-    list_display = ('title', 'course', 'created_at')
-
-@admin.register(Quiz)
-class QuizAdmin(admin.ModelAdmin):
-    list_display = ('title', 'course', 'created_at')
-
-@admin.register(Assignment)
-class AssignmentAdmin(admin.ModelAdmin):
-    list_display = ('title', 'course', 'deadline', 'created_at')
-
-@admin.register(LiveSession)
-class LiveSessionAdmin(admin.ModelAdmin):
-    list_display = ('title', 'course', 'schedule', 'created_at')
-
-@admin.register(Discussion)
-class DiscussionAdmin(admin.ModelAdmin):
-    list_display = ('course', 'user', 'created_at')
-
-@admin.register(Enrollment)
-class EnrollmentAdmin(admin.ModelAdmin):
-    list_display = ('student', 'course', 'created_at')
-
-@admin.register(Grades)
-class GradesAdmin(admin.ModelAdmin):
-    list_display = ('student', 'course', 'grade', 'updated_at')
-
-@admin.register(Certificate)
-class CertificateAdmin(admin.ModelAdmin):
-    list_display = ('student', 'course', 'issued_date')
-
-@admin.register(Notification)
-class NotificationAdmin(admin.ModelAdmin):
-    list_display = ('user', 'notification_type', 'status', 'created_at')
-
-@admin.register(SystemLog)
-class SystemLogAdmin(admin.ModelAdmin):
-    list_display = ('admin', 'action', 'timestamp')
+# Register your models
+admin.site.register(Role)
+admin.site.register(User)
+admin.site.register(Admin)
+admin.site.register(Teacher)
+admin.site.register(Student)
+admin.site.register(CourseCategory)
+admin.site.register(Course)
+admin.site.register(Lesson)
+admin.site.register(Quiz)
+admin.site.register(Assignment)
+admin.site.register(LiveSession)
+admin.site.register(Discussion)
+admin.site.register(Enrollment)
+admin.site.register(Grades)
+admin.site.register(Certificate)
+admin.site.register(Notification)
+admin.site.register(SystemLog)

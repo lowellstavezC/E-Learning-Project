@@ -1,84 +1,128 @@
 {% extends 'base.html' %}
 
-{% block title %}Student Dashboard - LearnPeak{% endblock %}
+{% block title %}Student Dashboard | LearnPeak{% endblock %}
+
+{% block head %}
+<!-- Inline critical CSS -->
+<style>
+    .dashboard-stat { @apply bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow; }
+    .stat-title { @apply font-semibold text-gray-900; }
+    .stat-value { @apply text-2xl; }
+    .stat-subtitle { @apply text-sm text-gray-600; }
+</style>
+<!-- Preload critical assets -->
+<link rel="preload" href="https://cdn.tailwindcss.com" as="style" crossorigin>
+<meta name="description" content="LearnPeak student dashboard - Access your courses, track progress, and manage your learning journey">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{% endblock %}
+
+{% block navigation_items %}
+    <nav class="flex space-x-4" aria-label="Main navigation">
+        <a href="#courses" class="text-gray-600 hover:text-gray-900" aria-label="My Courses">My Courses</a>
+        <a href="#progress" class="text-gray-600 hover:text-gray-900" aria-label="Progress">Progress</a>
+        <a href="#assignments" class="text-gray-600 hover:text-gray-900" aria-label="Assignments">Assignments</a>
+        <a href="{% url 'LearnPeak:logout' %}" 
+           class="bg-gray-900 text-white px-5 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+           aria-label="Logout">
+            Logout
+        </a>
+    </nav>
+{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <header class="bg-white shadow">
-        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-            <h1 class="text-3xl font-bold text-gray-900">Welcome, {{ user.name }}</h1>
-        </div>
-    </header>
+<main class="min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Welcome Section -->
+        <section class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Welcome, {{ request.user.name }}!</h1>
+            <p class="text-gray-600">Track your learning progress</p>
+        </section>
 
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <!-- Enrolled Courses -->
-        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
-            <div class="p-6 bg-white border-b border-gray-200">
-                <h2 class="text-2xl font-semibold text-gray-800 mb-4">My Courses</h2>
-                {% if enrollments %}
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {% for enrollment in enrollments %}
-                        <div class="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                            <div class="p-4">
-                                <h3 class="text-lg font-semibold text-gray-800">{{ enrollment.course.title }}</h3>
-                                <p class="text-gray-600 text-sm mt-1">Instructor: {{ enrollment.course.teacher.user.name }}</p>
-                                <div class="mt-4">
-                                    <a href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                                        Continue Learning
-                                    </a>
+        <!-- Quick Stats -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" aria-label="Statistics">
+            <article class="dashboard-stat">
+                <h2 class="stat-title">Enrolled Courses</h2>
+                <p class="stat-value">{{ enrolled_courses|length }}</p>
+                <p class="stat-subtitle">Active courses</p>
+            </article>
+            <article class="dashboard-stat">
+                <h2 class="stat-title">Assignments</h2>
+                <p class="stat-value">{{ pending_assignments|length }}</p>
+                <p class="stat-subtitle">Pending tasks</p>
+            </article>
+            <article class="dashboard-stat">
+                <h2 class="stat-title">Average Grade</h2>
+                <p class="stat-value">{{ avg_grade|default:"N/A" }}</p>
+                <p class="stat-subtitle">Overall performance</p>
+            </article>
+            <article class="dashboard-stat">
+                <h2 class="stat-title">Completed</h2>
+                <p class="stat-value">{{ completed_courses|length }}</p>
+                <p class="stat-subtitle">Finished courses</p>
+            </article>
+        </section>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Enrolled Courses -->
+            <section id="courses" class="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
+                <header class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-900">My Courses</h2>
+                    <a href="#" class="text-sm text-gray-900 hover:text-gray-700">Browse Courses</a>
+                </header>
+                {% if enrolled_courses %}
+                    <div class="grid gap-4">
+                        {% for course in enrolled_courses %}
+                        <article class="border rounded-lg p-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-semibold text-gray-900">{{ course.title }}</h3>
+                                    <p class="text-sm text-gray-600">{{ course.description|truncatewords:20 }}</p>
+                                    <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-gray-900 h-2 rounded-full" style="width: {{ course.progress }}%"></div>
+                                    </div>
                                 </div>
+                                <a href="#" class="text-sm text-gray-900 hover:text-gray-700">Continue →</a>
                             </div>
-                        </div>
+                        </article>
                         {% endfor %}
                     </div>
                 {% else %}
-                    <p class="text-gray-600">You haven't enrolled in any courses yet.</p>
-                    <a href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 mt-4">
-                        Browse Courses
-                    </a>
+                    <p class="text-gray-600">No courses enrolled yet. Start learning today!</p>
                 {% endif %}
-            </div>
-        </div>
+            </section>
 
-        <!-- Recent Grades -->
-        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-            <div class="p-6 bg-white border-b border-gray-200">
-                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Recent Grades</h2>
-                {% if grades %}
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignment</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                {% for grade in grades %}
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ grade.course.title }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {% if grade.assignment %}
-                                            {{ grade.assignment.title }}
-                                        {% elif grade.quiz %}
-                                            {{ grade.quiz.title }}
-                                        {% endif %}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ grade.grade }}%</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ grade.updated_at|date:"M d, Y" }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+            <!-- Upcoming Deadlines -->
+            <section id="assignments" class="bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Upcoming Deadlines</h2>
+                {% if pending_assignments %}
+                    <div class="space-y-4">
+                        {% for assignment in pending_assignments %}
+                        <article class="border-b pb-4 last:border-b-0">
+                            <h3 class="font-medium text-gray-900">{{ assignment.title }}</h3>
+                            <p class="text-sm text-gray-600">{{ assignment.course.title }}</p>
+                            <time datetime="{{ assignment.deadline|date:'Y-m-d' }}" 
+                                  class="text-xs text-gray-500">
+                                Due: {{ assignment.deadline|date:"M d, Y" }}
+                            </time>
+                        </article>
+                        {% endfor %}
                     </div>
                 {% else %}
-                    <p class="text-gray-600">No grades available yet.</p>
+                    <p class="text-gray-600">No upcoming deadlines</p>
                 {% endif %}
-            </div>
+            </section>
         </div>
-    </main>
-</div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Defer non-critical JavaScript -->
+<script defer>
+    // Add any necessary JavaScript here
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize any dynamic features
+    });
+</script>
 {% endblock %} 

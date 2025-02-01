@@ -1,184 +1,98 @@
 {% extends 'base.html' %}
 
-{% block title %}Register - LearnPeak{% endblock %}
+{% block title %}Register{% endblock %}
+
+{% block navigation_items %}
+    <a href="{% url 'LearnPeak:login' %}" class="text-gray-600 hover:text-gray-900">Login</a>
+{% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-50 to-teal-50 py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-    <!-- Animated background shapes -->
-    <div class="absolute inset-0 overflow-hidden">
-        <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div class="absolute top-40 left-40 w-80 h-80 bg-teal-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
-    </div>
-
-    <div class="max-w-md w-full space-y-8 relative z-10">
-        <!-- Logo/Brand with animation -->
-        <div class="flex justify-center transform hover:scale-105 transition-transform duration-300">
-            <div class="h-20 w-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-lg flex items-center justify-center relative overflow-hidden group">
-                <div class="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <svg class="h-12 w-12 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-            </div>
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div class="text-center">
+            <h2 class="text-3xl font-bold text-gray-900">Create your account</h2>
+            <p class="mt-2 text-sm text-gray-600">
+                Or
+                <a href="{% url 'LearnPeak:login' %}" class="font-medium text-gray-900 hover:text-gray-700">
+                    sign in to your account
+                </a>
+            </p>
         </div>
+        <form class="mt-8 space-y-6" action="{% url 'LearnPeak:register' %}" method="POST">
+            {% csrf_token %}
+            
+            <!-- Role Selection -->
+            <div class="space-y-4 mb-6">
+                <label class="text-sm font-medium text-gray-700">I want to:</label>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="relative">
+                        <input type="radio" name="user_type" id="student" value="student" 
+                               class="peer hidden" checked>
+                        <label for="student" 
+                               class="block cursor-pointer select-none rounded-lg p-4 text-center peer-checked:bg-gray-900 peer-checked:text-white border-2 border-gray-200 peer-checked:border-gray-900 transition-colors">
+                            <span class="block text-sm font-semibold">Student</span>
+                            <span class="block text-xs mt-1">Learn new skills</span>
+                        </label>
+                    </div>
+                    <div class="relative">
+                        <input type="radio" name="user_type" id="teacher" value="teacher" 
+                               class="peer hidden">
+                        <label for="teacher" 
+                               class="block cursor-pointer select-none rounded-lg p-4 text-center peer-checked:bg-gray-900 peer-checked:text-white border-2 border-gray-200 peer-checked:border-gray-900 transition-colors">
+                            <span class="block text-sm font-semibold">Teacher</span>
+                            <span class="block text-xs mt-1">Share knowledge</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
 
-        <div class="bg-white/90 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/50 space-y-8 transform hover:scale-[1.01] transition-all duration-300">
-            <!-- Header with enhanced typography -->
+            <!-- Name Field -->
             <div>
-                <h2 class="mt-2 text-center text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+                <label for="name" class="sr-only">Full Name</label>
+                <input id="name" name="name" type="text" required 
+                    class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm" 
+                    placeholder="Full Name">
+            </div>
+
+            <!-- Email and Password Fields -->
+            <div class="rounded-md shadow-sm -space-y-px">
+                <div>
+                    <label for="email" class="sr-only">Email address</label>
+                    <input id="email" name="email" type="email" required 
+                        class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm" 
+                        placeholder="Email address">
+                </div>
+                <div>
+                    <label for="password" class="sr-only">Password</label>
+                    <input id="password" name="password" type="password" required 
+                        class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm" 
+                        placeholder="Password">
+                </div>
+                <div>
+                    <label for="confirm_password" class="sr-only">Confirm Password</label>
+                    <input id="confirm_password" name="confirm_password" type="password" required 
+                        class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-gray-500 focus:border-gray-500 focus:z-10 sm:text-sm" 
+                        placeholder="Confirm Password">
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" 
+                    class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
                     Create Account
-                </h2>
-                <p class="mt-3 text-center text-sm text-gray-600">
-                    Already have an account?
-                    <a href="{% url 'LearnPeak:login' %}" class="font-medium text-indigo-600 hover:text-indigo-500 transition-all duration-200 border-b-2 border-transparent hover:border-indigo-500 hover:scale-105 inline-block">
-                        Sign in
-                    </a>
-                </p>
-            </div>
-
-            <!-- Enhanced Social Registration Buttons -->
-            <div class="flex flex-col space-y-3">
-                <button type="button" class="group relative w-full flex items-center justify-center px-4 py-3 bg-white/80 border border-gray-300 rounded-2xl shadow-sm text-sm font-medium text-gray-700 hover:bg-white transition-all duration-300 hover:border-gray-400 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transform hover:scale-[1.02]">
-                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                        <img class="h-5 w-5 transform group-hover:scale-110 transition-transform duration-200" src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google logo">
-                    </span>
-                    <span class="group-hover:translate-x-1 transition-transform duration-200">Sign up with Google</span>
-                </button>
-                <button type="button" class="group relative w-full flex items-center justify-center px-4 py-3 bg-white/80 border border-gray-300 rounded-2xl shadow-sm text-sm font-medium text-gray-700 hover:bg-white transition-all duration-300 hover:border-gray-400 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                        <img class="h-5 w-5 transform group-hover:scale-110 transition-transform duration-200" src="https://www.svgrepo.com/show/475647/facebook-color.svg" alt="Facebook logo">
-                    </span>
-                    <span class="group-hover:translate-x-1 transition-transform duration-200">Sign up with Facebook</span>
                 </button>
             </div>
+        </form>
 
-            <div class="relative">
-                <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-gray-200"></div>
-                </div>
-                <div class="relative flex justify-center text-sm">
-                    <span class="px-4 bg-white text-gray-500">Or register with email</span>
-                </div>
+        {% if messages %}
+        <div class="mt-4">
+            {% for message in messages %}
+            <div class="p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
+                {{ message }}
             </div>
-
-            <!-- Enhanced Form Fields -->
-            <form class="space-y-6" method="POST">
-                {% csrf_token %}
-                <div class="space-y-4">
-                    <div class="relative group">
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1 group-hover:text-indigo-600 transition-colors duration-200">
-                            Email address
-                        </label>
-                        <div class="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                                </svg>
-                            </div>
-                            <input id="email" name="email" type="email" required
-                                class="pl-10 block w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 sm:text-sm"
-                                placeholder="Enter your email">
-                        </div>
-                    </div>
-
-                    <div class="relative group">
-                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1 group-hover:text-indigo-600 transition-colors duration-200">
-                            Password
-                        </label>
-                        <div class="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                            <input id="password" name="password" type="password" required
-                                class="pl-10 block w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 sm:text-sm"
-                                placeholder="Create a password">
-                        </div>
-                    </div>
-
-                    <div class="relative group">
-                        <label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-1 group-hover:text-indigo-600 transition-colors duration-200">
-                            Confirm Password
-                        </label>
-                        <div class="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                            <input id="confirm_password" name="confirm_password" type="password" required
-                                class="pl-10 block w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 sm:text-sm"
-                                placeholder="Confirm your password">
-                        </div>
-                    </div>
-
-                    <div class="relative group">
-                        <label for="user_type" class="block text-sm font-medium text-gray-700 mb-1 group-hover:text-indigo-600 transition-colors duration-200">
-                            I am a:
-                        </label>
-                        <div class="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                                </svg>
-                            </div>
-                            <select id="user_type" name="user_type" required
-                                class="pl-10 block w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 sm:text-sm appearance-none bg-white">
-                                <option value="">Select your role</option>
-                                <option value="student">Student</option>
-                                <option value="teacher">Teacher</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex items-center">
-                    <input id="terms" name="terms" type="checkbox" required
-                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                    <label for="terms" class="ml-2 block text-sm text-gray-700">
-                        I agree to the
-                        <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 border-b-2 border-transparent hover:border-indigo-500">Terms</a>
-                        and
-                        <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 border-b-2 border-transparent hover:border-indigo-500">Privacy Policy</a>
-                    </label>
-                </div>
-
-                <!-- Enhanced Submit Button -->
-                <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-indigo-600 via-purple-500 to-indigo-600 hover:from-indigo-700 hover:via-purple-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg bg-size-200 bg-pos-0 hover:bg-pos-100">
-                    <span class="group-hover:translate-x-1 transition-transform duration-200">Create Account</span>
-                </button>
-            </form>
+            {% endfor %}
         </div>
+        {% endif %}
     </div>
 </div>
-
-<!-- Add these styles to your CSS -->
-<style>
-    @keyframes blob {
-        0% { transform: translate(0px, 0px) scale(1); }
-        33% { transform: translate(30px, -50px) scale(1.1); }
-        66% { transform: translate(-20px, 20px) scale(0.9); }
-        100% { transform: translate(0px, 0px) scale(1); }
-    }
-    .animate-blob {
-        animation: blob 7s infinite;
-    }
-    .animation-delay-2000 {
-        animation-delay: 2s;
-    }
-    .animation-delay-4000 {
-        animation-delay: 4s;
-    }
-    .bg-size-200 {
-        background-size: 200% 200%;
-    }
-    .bg-pos-0 {
-        background-position: 0% 0%;
-    }
-    .bg-pos-100 {
-        background-position: 100% 100%;
-    }
-</style>
-{% endblock %} 
+{% endblock %}
