@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header with Controls -->
+    <div class="mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'LearnPeak:course_detail' course.id %}" class="text-gray-600 hover:text-gray-800">Course</a>
+                <span class="text-gray-400">→</span>
+                <span class="font-semibold">Student Progress</span>
+            </div>
+            <!-- Export Buttons -->
+            <div class="flex space-x-3">
+                <button onclick="exportToPDF()" 
+                        class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                    Export PDF
+                </button>
+                <button onclick="exportToExcel()" 
+                        class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                    Export Excel
+                </button>
+            </div>
+        </div>
+        
+        <!-- Analytics Charts -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Performance Distribution Chart -->
+            <div class="bg-white p-4 rounded-lg shadow">
+                <h3 class="text-lg font-semibold mb-4">Performance Distribution</h3>
+                <canvas id="performanceChart"></canvas>
+            </div>
+            <!-- Progress Over Time Chart -->
+            <div class="bg-white p-4 rounded-lg shadow">
+                <h3 class="text-lg font-semibold mb-4">Average Progress</h3>
+                <canvas id="progressChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Existing Filtering Controls -->
+        <div class="bg-white p-4 rounded-lg shadow mb-6">
+            <div class="flex flex-wrap gap-4">
+                <select id="progressFilter" onchange="filterStudents()" 
+                        class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="all">All Students</option>
+                    <option value="high">High Performers (>80%)</option>
+                    <option value="medium">Average Performers (50-80%)</option>
+                    <option value="low">Low Performers (<50%)</option>
+                </select>
+                
+                <select id="sortBy" onchange="sortStudents()"
+                        class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="name">Sort by Name</option>
+                    <option value="quiz">Sort by Quiz Average</option>
+                    <option value="exam">Sort by Exam Average</option>
+                    <option value="overall">Sort by Overall Progress</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Progress Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quiz Average</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam Average</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignments</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overall Progress</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200" id="studentList">
+                {% for student in students %}
+                <tr class="student-row" 
+                    data-name="{{ student.student.user.name }}"
+                    data-quiz="{{ student.quiz_average }}"
+                    data-exam="{{ student.exam_average }}"
+                    data-overall="{{ student.overall_progress }}">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">{{ student.student.user.name }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ student.quiz_average|floatformat:1 }}%</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ student.exam_average|floatformat:1 }}%</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ student.assignments_completed }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="h-2.5 rounded-full {% if student.overall_progress >= 80 %}bg-green-600{% elif student.overall_progress >= 50 %}bg-yellow-600{% else %}bg-red-600{% endif %}"
+                                 style="width: {{ student.overall_progress }}%"></div>
+                        </div>
+                        <span class="text-sm text-gray-600">{{ student.overall_progress|floatformat:1 }}%</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <a href="{% url 'LearnPeak:student_progress_detail' course.id student.student.id %}"
+                           class="text-blue-600 hover:text-blue-900">View Details</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                        No students enrolled in this course yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Include Required Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+
+<script>
+function filterStudents() {
+    const filter = document.getElementById('progressFilter').value;
+    const rows = document.querySelectorAll('.student-row');
+    
+    rows.forEach(row => {
+        const progress = parseFloat(row.dataset.overall);
+        let show = true;
+        
+        if (filter === 'high') {
+            show = progress >= 80;
+        } else if (filter === 'medium') {
+            show = progress >= 50 && progress < 80;
+        } else if (filter === 'low') {
+            show = progress < 50;
+        }
+        
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+function sortStudents() {
+    const sortBy = document.getElementById('sortBy').value;
+    const tbody = document.getElementById('studentList');
+    const rows = Array.from(tbody.getElementsByClassName('student-row'));
+    
+    rows.sort((a, b) => {
+        if (sortBy === 'name') {
+            return a.dataset.name.localeCompare(b.dataset.name);
+        } else {
+            const aValue = parseFloat(a.dataset[sortBy]);
+            const bValue = parseFloat(b.dataset[sortBy]);
+            return bValue - aValue;
+        }
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// Chart Initialization
+document.addEventListener('DOMContentLoaded', function() {
+    // Performance Distribution Chart
+    const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+    new Chart(performanceCtx, {
+        type: 'pie',
+        data: {
+            labels: ['High Performers', 'Average Performers', 'Low Performers'],
+            datasets: [{
+                data: calculatePerformanceDistribution(),
+                backgroundColor: ['#10B981', '#FBBF24', '#EF4444']
+            }]
+        }
+    });
+
+    // Progress Over Time Chart
+    const progressCtx = document.getElementById('progressChart').getContext('2d');
+    new Chart(progressCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Quizzes', 'Exams', 'Assignments'],
+            datasets: [{
+                label: 'Class Average',
+                data: calculateClassAverages(),
+                backgroundColor: '#60A5FA'
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+});
+
+// Calculate performance distribution
+function calculatePerformanceDistribution() {
+    const rows = document.querySelectorAll('.student-row');
+    let high = 0, medium = 0, low = 0;
+    
+    rows.forEach(row => {
+        const progress = parseFloat(row.dataset.overall);
+        if (progress >= 80) high++;
+        else if (progress >= 50) medium++;
+        else low++;
+    });
+    
+    return [high, medium, low];
+}
+
+// Calculate class averages
+function calculateClassAverages() {
+    const rows = document.querySelectorAll('.student-row');
+    let quizSum = 0, examSum = 0, overallSum = 0;
+    
+    rows.forEach(row => {
+        quizSum += parseFloat(row.dataset.quiz);
+        examSum += parseFloat(row.dataset.exam);
+        overallSum += parseFloat(row.dataset.overall);
+    });
+    
+    const count = rows.length;
+    return [
+        quizSum/count,
+        examSum/count,
+        overallSum/count
+    ];
+}
+
+// Export to PDF
+function exportToPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(16);
+    doc.text('Course Progress Report', 20, 20);
+    
+    // Add table headers
+    const headers = ['Student', 'Quiz Avg', 'Exam Avg', 'Overall'];
+    let y = 40;
+    
+    doc.setFontSize(12);
+    headers.forEach((header, i) => {
+        doc.text(header, 20 + (i * 40), y);
+    });
+    
+    // Add data
+    const rows = document.querySelectorAll('.student-row');
+    rows.forEach((row, index) => {
+        y += 10;
+        doc.text(row.dataset.name, 20, y);
+        doc.text(row.dataset.quiz + '%', 60, y);
+        doc.text(row.dataset.exam + '%', 100, y);
+        doc.text(row.dataset.overall + '%', 140, y);
+    });
+    
+    doc.save('progress-report.pdf');
+}
+
+// Export to Excel
+function exportToExcel() {
+    const rows = document.querySelectorAll('.student-row');
+    const data = [['Student', 'Quiz Average', 'Exam Average', 'Overall Progress']];
+    
+    rows.forEach(row => {
+        data.push([
+            row.dataset.name,
+            row.dataset.quiz + '%',
+            row.dataset.exam + '%',
+            row.dataset.overall + '%'
+        ]);
+    });
+    
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Progress Report');
+    XLSX.writeFile(wb, 'progress-report.xlsx');
+}
+</script>
+{% endblock %} 

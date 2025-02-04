@@ -1,0 +1,366 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Exam - {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Edit Exam</h1>
+            <p class="text-gray-600">Course: {{ course.title }}</p>
+        </div>
+        <a href="{% url 'LearnPeak:manage_exams' course.id %}" 
+           class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+            ← Back to Exams
+        </a>
+    </div>
+
+    {% if messages %}
+    <div class="mt-4">
+        {% for message in messages %}
+            <div class="p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Exam Form -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <form id="examForm" method="POST" class="space-y-6">
+            {% csrf_token %}
+            <input type="hidden" name="exam_type" id="exam_type" value="{{ exam.exam_type }}">
+            
+            <!-- Exam Details Section -->
+            <div class="space-y-6">
+                <!-- Title -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Exam Title</label>
+                    <input type="text" name="title" required value="{{ exam.title }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea name="description" rows="4"
+                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">{{ exam.description }}</textarea>
+                </div>
+
+                <!-- Duration -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Time Limit (minutes)</label>
+                    <input type="number" name="duration" min="1" required value="{{ exam.duration }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+
+                <!-- Passing Grade -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Passing Grade (%)</label>
+                    <input type="number" name="passing_grade" min="0" max="100" required value="{{ exam.passing_grade }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+
+                <!-- Exam Type Selection -->
+                <div class="border-t pt-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-4">Exam Type</label>
+                    <div class="flex space-x-4">
+                        <button type="button" id="externalBtn" 
+                                class="px-4 py-2 rounded-lg border-2 {% if exam.exam_type == 'external' %}border-blue-500 bg-blue-50{% endif %}"
+                                onclick="selectExamType('external')">
+                            External Link
+                        </button>
+                        <button type="button" id="manualBtn"
+                                class="px-4 py-2 rounded-lg border-2 {% if exam.exam_type == 'manual' %}border-blue-500 bg-blue-50{% endif %}"
+                                onclick="selectExamType('manual')">
+                            Manual Input
+                        </button>
+                    </div>
+                </div>
+
+                <!-- External Link Section -->
+                <div id="externalSection" class="{% if exam.exam_type != 'external' %}hidden{% endif %}">
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700">External Link</label>
+                        <input type="url" name="external_link" value="{{ exam.external_link|default:'' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <!-- Manual Input Section -->
+                <div id="manualSection" class="{% if exam.exam_type != 'manual' %}hidden{% endif %}">
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700">Number of Questions</label>
+                        <input type="number" id="questionCount" min="1" max="50" value="1"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <button type="button" onclick="generateQuestions()"
+                                class="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            Update Questions
+                        </button>
+                    </div>
+                    <div id="questionsContainer"></div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex justify-end pt-6 border-t">
+                <button type="button" 
+                        onclick="updateExam({{ course.id }}, {{ exam.id }})"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    Update Exam
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function selectExamType(type) {
+    console.log('Selecting exam type:', type);
+    
+    // Update hidden input
+    document.getElementById('exam_type').value = type;
+    
+    // Update button styles
+    document.getElementById('externalBtn').classList.remove('border-blue-500', 'bg-blue-50');
+    document.getElementById('manualBtn').classList.remove('border-blue-500', 'bg-blue-50');
+    document.getElementById(`${type}Btn`).classList.add('border-blue-500', 'bg-blue-50');
+    
+    // Show/hide sections
+    document.getElementById('externalSection').classList.toggle('hidden', type !== 'external');
+    document.getElementById('manualSection').classList.toggle('hidden', type !== 'manual');
+}
+
+function generateQuestions() {
+    console.log('Generating questions');
+    const count = parseInt(document.getElementById('questionCount').value);
+    if (count < 1) {
+        alert('Please enter a valid number of questions');
+        return;
+    }
+    
+    const container = document.getElementById('questionsContainer');
+    container.innerHTML = '';
+    
+    // Get existing questions if any
+    const existingQuestions = {{ questions|safe|default:'[]' }};
+    
+    for (let i = 0; i < count; i++) {
+        const questionDiv = document.createElement('div');
+        questionDiv.className = `question-item ${i === 0 ? '' : 'hidden'}`;
+        questionDiv.dataset.index = i;
+        
+        const existingQuestion = existingQuestions[i] || {};
+        
+        questionDiv.innerHTML = `
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Question ${i + 1}</label>
+                    <input type="text" name="questions[${i}][text]" required
+                           value="${existingQuestion.text || ''}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <input type="text" name="questions[${i}][option1]" placeholder="Option 1" required
+                               value="${existingQuestion.option1 || ''}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <input type="text" name="questions[${i}][option2]" placeholder="Option 2" required
+                               value="${existingQuestion.option2 || ''}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <input type="text" name="questions[${i}][option3]" placeholder="Option 3" required
+                               value="${existingQuestion.option3 || ''}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <input type="text" name="questions[${i}][option4]" placeholder="Option 4" required
+                               value="${existingQuestion.option4 || ''}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Correct Answer</label>
+                    <select name="questions[${i}][correct_answer]" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="1" ${existingQuestion.correct_answer === 1 ? 'selected' : ''}>Option 1</option>
+                        <option value="2" ${existingQuestion.correct_answer === 2 ? 'selected' : ''}>Option 2</option>
+                        <option value="3" ${existingQuestion.correct_answer === 3 ? 'selected' : ''}>Option 3</option>
+                        <option value="4" ${existingQuestion.correct_answer === 4 ? 'selected' : ''}>Option 4</option>
+                    </select>
+                </div>
+            </div>
+        `;
+        container.appendChild(questionDiv);
+    }
+    
+    updateNavigationButtons();
+}
+
+function updateNavigationButtons() {
+    const questions = document.querySelectorAll('.question-item');
+    const currentIndex = Array.from(questions).findIndex(q => !q.classList.contains('hidden'));
+    
+    // Add navigation buttons if they don't exist
+    if (!document.getElementById('questionNav')) {
+        const navDiv = document.createElement('div');
+        navDiv.id = 'questionNav';
+        navDiv.className = 'flex justify-between mt-4';
+        navDiv.innerHTML = `
+            <button type="button" onclick="showPreviousQuestion()"
+                    class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                Previous Question
+            </button>
+            <span class="py-2" id="questionCounter">Question 1 of ${questions.length}</span>
+            <button type="button" onclick="showNextQuestion()"
+                    class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                Next Question
+            </button>
+        `;
+        document.getElementById('questionsContainer').appendChild(navDiv);
+    }
+    
+    // Update counter
+    document.getElementById('questionCounter').textContent = 
+        `Question ${currentIndex + 1} of ${questions.length}`;
+}
+
+function showNextQuestion() {
+    const questions = document.querySelectorAll('.question-item');
+    const currentIndex = Array.from(questions).findIndex(q => !q.classList.contains('hidden'));
+    if (currentIndex < questions.length - 1) {
+        questions[currentIndex].classList.add('hidden');
+        questions[currentIndex + 1].classList.remove('hidden');
+        updateNavigationButtons();
+    }
+}
+
+function showPreviousQuestion() {
+    const questions = document.querySelectorAll('.question-item');
+    const currentIndex = Array.from(questions).findIndex(q => !q.classList.contains('hidden'));
+    if (currentIndex > 0) {
+        questions[currentIndex].classList.add('hidden');
+        questions[currentIndex - 1].classList.remove('hidden');
+        updateNavigationButtons();
+    }
+}
+
+function updateExam(courseId, examId) {
+    console.log('Updating exam:', courseId, examId);
+    const formData = new FormData(document.getElementById('examForm'));
+    
+    // Get all questions data
+    const questions = document.querySelectorAll('.question-item');
+    questions.forEach((question, index) => {
+        const text = question.querySelector('input[name^="questions"][name$="[text]"]').value;
+        const option1 = question.querySelector('input[name^="questions"][name$="[option1]"]').value;
+        const option2 = question.querySelector('input[name^="questions"][name$="[option2]"]').value;
+        const option3 = question.querySelector('input[name^="questions"][name$="[option3]"]').value;
+        const option4 = question.querySelector('input[name^="questions"][name$="[option4]"]').value;
+        const correct_answer = question.querySelector('select[name^="questions"][name$="[correct_answer]"]').value;
+        
+        formData.append(`questions[${index}][text]`, text);
+        formData.append(`questions[${index}][option1]`, option1);
+        formData.append(`questions[${index}][option2]`, option2);
+        formData.append(`questions[${index}][option3]`, option3);
+        formData.append(`questions[${index}][option4]`, option4);
+        formData.append(`questions[${index}][correct_answer]`, correct_answer);
+    });
+    
+    fetch(`/teacher/course/${courseId}/exams/${examId}/edit/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = `/teacher/course/${courseId}/exams/`;
+        } else {
+            throw new Error(data.error || 'Failed to update exam');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating exam. Please try again.');
+    });
+}
+
+// Add this function to validate the form before submission
+function validateForm() {
+    const title = document.querySelector('input[name="title"]').value;
+    const duration = document.querySelector('input[name="duration"]').value;
+    const examType = document.querySelector('input[name="exam_type"]').value;
+    
+    if (!title || !duration) {
+        alert('Please fill in all required fields');
+        return false;
+    }
+    
+    if (examType === 'manual') {
+        const questions = document.querySelectorAll('.question-item');
+        if (questions.length === 0) {
+            alert('Please add at least one question');
+            return false;
+        }
+        
+        for (let question of questions) {
+            const text = question.querySelector('input[name^="questions"][name$="[text]"]').value;
+            const options = question.querySelectorAll('input[name^="questions"][name$="[option"]');
+            const correct_answer = question.querySelector('select[name^="questions"][name$="[correct_answer]"]').value;
+            
+            if (!text || !correct_answer) {
+                alert('Please fill in all question fields');
+                return false;
+            }
+            
+            for (let option of options) {
+                if (!option.value) {
+                    alert('Please fill in all options for each question');
+                    return false;
+                }
+            }
+        }
+    } else if (examType === 'external') {
+        const externalLink = document.querySelector('input[name="external_link"]').value;
+        if (!externalLink) {
+            alert('Please provide an external link');
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+// Update the click handler
+document.querySelector('button[onclick^="updateExam"]').onclick = function(e) {
+    e.preventDefault();
+    if (validateForm()) {
+        const courseId = this.getAttribute('onclick').match(/\d+/g)[0];
+        const examId = this.getAttribute('onclick').match(/\d+/g)[1];
+        updateExam(courseId, examId);
+    }
+};
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const examType = document.getElementById('exam_type').value;
+    if (examType) {
+        selectExamType(examType);
+    }
+    
+    // If there are existing questions, set the question count and generate
+    const existingQuestions = {{ questions|safe|default:'[]' }};
+    if (existingQuestions.length > 0) {
+        document.getElementById('questionCount').value = existingQuestions.length;
+        generateQuestions();
+    }
+});
+</script>
+{% endblock %} 

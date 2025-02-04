@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-6 flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'LearnPeak:course_detail' course.id %}" 
+               class="text-gray-600 hover:text-gray-800">Course</a>
+            <span class="text-gray-400">→</span>
+            <span class="font-semibold">{{ assignment.title }} Submissions</span>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold mb-6">{{ assignment.title }} - Submissions</h1>
+
+        <table class="min-w-full">
+            <thead>
+                <tr class="border-b-2 border-gray-200">
+                    <th class="py-3 text-left">Student</th>
+                    <th class="py-3 text-left">Submitted Date</th>
+                    <th class="py-3 text-left">Status</th>
+                    <th class="py-3 text-left">Grade</th>
+                    <th class="py-3 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for submission in submissions %}
+                <tr class="border-b border-gray-200">
+                    <td class="py-3">{{ submission.student.user.name }}</td>
+                    <td class="py-3">{{ submission.submitted_at|date:"M d, Y" }}</td>
+                    <td class="py-3">
+                        <span class="px-2 py-1 rounded-full text-sm
+                            {% if submission.status == 'submitted' %}bg-yellow-100 text-yellow-800
+                            {% elif submission.status == 'graded' %}bg-green-100 text-green-800
+                            {% else %}bg-blue-100 text-blue-800{% endif %}">
+                            {{ submission.status|title }}
+                        </span>
+                    </td>
+                    <td class="py-3">{{ submission.grade|default:"-" }}</td>
+                    <td class="py-3">
+                        <a href="{% url 'LearnPeak:grade_submission' course.id assignment.id submission.id %}"
+                           class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
+                            {% if submission.grade %}Review{% else %}Grade{% endif %}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %} 

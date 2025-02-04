@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Action Buttons -->
+    <div class="flex justify-end space-x-4 mb-8">
+        <a href="{% url 'LearnPeak:teacher_dashboard' %}" 
+           class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+            ← Back to Dashboard
+        </a>
+        <a href="{% url 'LearnPeak:view_student_progress' course.id %}" 
+           class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+            View Student Progress
+        </a>
+    </div>
+
+    <!-- Course Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold mb-4">{{ course.title }}</h1>
+        <p class="text-gray-600 mb-4">{{ course.description }}</p>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white p-4 rounded-lg shadow">
+            <h3 class="font-semibold mb-2">Lessons</h3>
+            <p class="text-2xl">{{ lessons.count }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <h3 class="font-semibold mb-2">Quizzes</h3>
+            <p class="text-2xl">{{ quizzes.count }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <h3 class="font-semibold mb-2">Assignments</h3>
+            <p class="text-2xl">{{ assignments.count }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <h3 class="font-semibold mb-2">Exams</h3>
+            <p class="text-2xl">{{ exams.count }}</p>
+        </div>
+    </div>
+
+    <!-- Course Content -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Lessons Section -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Lessons</h2>
+                <a href="{% url 'LearnPeak:manage_lessons' course.id %}" class="text-blue-600 hover:text-blue-800">Manage Lessons</a>
+            </div>
+            <ul class="space-y-2">
+                {% for lesson in lessons %}
+                <li class="p-2 hover:bg-gray-50 rounded">
+                    <span class="font-medium">{{ lesson.title }}</span>
+                </li>
+                {% empty %}
+                <li class="text-gray-500">No lessons added yet</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Quizzes Section -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Quizzes</h2>
+                <div class="flex space-x-4">
+                    <!-- Path 1: Course Quiz Results Overview button -->
+                    <a href="{% url 'LearnPeak:view_quiz_results' course.id %}" 
+                       class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                        Course Quiz Results Overview
+                    </a>
+                    
+                    <!-- Path 2: Manage Quizzes button -->
+                    <a href="{% url 'LearnPeak:manage_quizzes' course.id %}" 
+                       class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                        Manage Quizzes
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Path 3: Direct Quiz Results links -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="space-y-4">
+                    {% for quiz in quizzes %}
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="font-medium">{{ quiz.title }}</h3>
+                            <p class="text-sm text-gray-600">{{ quiz.description }}</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <a href="{% url 'LearnPeak:quiz_results_list' course.id quiz.id %}" 
+                               class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                                View Quiz Results
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignments Section -->
+        <div class="bg-white p-6 rounded-lg shadow mt-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Assignments</h2>
+                <div class="flex space-x-4">
+                    <a href="{% url 'LearnPeak:manage_assignments' course.id %}" 
+                       class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                        Manage Assignments
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Sorting and Filtering Controls -->
+            <div class="flex justify-between items-center mb-4 p-4 bg-gray-50 rounded-lg">
+                <div class="flex space-x-4">
+                    <!-- Filter Dropdown -->
+                    <select id="assignmentFilter" onchange="filterAssignments()" 
+                            class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="all">All Assignments</option>
+                        <option value="pending">Pending Submissions</option>
+                        <option value="graded">Graded</option>
+                        <option value="overdue">Overdue</option>
+                    </select>
+                    
+                    <!-- Sort Dropdown -->
+                    <select id="assignmentSort" onchange="sortAssignments()"
+                            class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="dueDate">Sort by Due Date</option>
+                        <option value="title">Sort by Title</option>
+                        <option value="submissions">Sort by Submissions</option>
+                    </select>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="flex space-x-4 text-sm">
+                    <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
+                        Total: {{ assignments|length }}
+                    </span>
+                    <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full">
+                        Pending: {{ pending_count }}
+                    </span>
+                    <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full">
+                        Graded: {{ graded_count }}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Assignment List -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div id="assignmentList" class="space-y-6">
+                    {% for assignment in assignments %}
+                    <div class="border-b pb-6 last:border-0 assignment-item"
+                         data-due-date="{{ assignment.due_date|date:'Y-m-d' }}"
+                         data-title="{{ assignment.title }}"
+                         data-submissions="{{ assignment.assignmentsubmission_set.count }}"
+                         data-status="{% if assignment.graded_count > 0 %}graded
+                                      {% elif assignment.due_date|date:'Y-m-d' < current_date|date:'Y-m-d' %}overdue
+                                      {% else %}pending{% endif %}">
+                        <div class="flex justify-between items-start">
+                            <div class="space-y-2">
+                                <h3 class="text-lg font-medium">{{ assignment.title }}</h3>
+                                
+                                <!-- Due Date with Status -->
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-medium">Due:</span>
+                                    <span class="{% if assignment.due_date|date:'Y-m-d' < current_date|date:'Y-m-d' %}text-red-600{% elif assignment.due_date|date:'Y-m-d' == current_date|date:'Y-m-d' %}text-yellow-600{% else %}text-green-600{% endif %}">
+                                        {{ assignment.due_date|date:"M d, Y" }}
+                                        {% if assignment.due_date|date:'Y-m-d' < current_date|date:'Y-m-d' %}
+                                            (Overdue)
+                                        {% elif assignment.due_date|date:'Y-m-d' == current_date|date:'Y-m-d' %}
+                                            (Due Today)
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                
+                                <!-- Submission Stats -->
+                                <div class="flex space-x-6 text-sm">
+                                    <div>
+                                        <span class="font-medium">Total Submissions:</span>
+                                        <span class="text-blue-600">{{ assignment.assignmentsubmission_set.count }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="font-medium">Graded:</span>
+                                        <span class="text-green-600">{{ assignment.graded_count }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="font-medium">Pending:</span>
+                                        <span class="text-yellow-600">{{ assignment.pending_count }}</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Assignment Details -->
+                                {% if assignment.description %}
+                                <p class="text-gray-600">{{ assignment.description|truncatewords:30 }}</p>
+                                {% endif %}
+                                
+                                <!-- File Attachment Info -->
+                                {% if assignment.file %}
+                                <div class="text-sm text-gray-600">
+                                    <span class="font-medium">Attached File:</span>
+                                    <a href="{{ assignment.file.url }}" class="text-blue-600 hover:text-blue-800 ml-1">
+                                        Download Assignment File
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="flex flex-col space-y-2">
+                                <a href="{% url 'LearnPeak:assignment_submissions_list' course.id assignment.id %}" 
+                                   class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                                    View Submissions
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-600 text-center py-4">No assignments created yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Exams Section -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Exams</h2>
+                <div class="flex space-x-4">
+                    <!-- Existing Course Exam Results Overview button -->
+                    <a href="{% url 'LearnPeak:view_exam_results' course.id %}" 
+                       class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                        Course Exam Results Overview
+                    </a>
+                    
+                    <!-- Add Manage Exams button -->
+                    <a href="{% url 'LearnPeak:manage_exams' course.id %}" 
+                       class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                        Manage Exams
+                    </a>
+                </div>
+            </div>
+
+            <!-- List of Exams -->
+            <div class="mt-4 space-y-4">
+                {% if exams %}
+                    {% for exam in exams %}
+                    <div class="border-t py-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-semibold">{{ exam.title }}</h3>
+                            <!-- This button should always show -->
+                            <a href="{% url 'LearnPeak:exam_results_list' course.id exam.id %}"
+                                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                                View Final Exam Results
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-gray-600">No exams created yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add this JavaScript to the bottom of your template -->
+<script>
+function filterAssignments() {
+    const filter = document.getElementById('assignmentFilter').value;
+    const items = document.querySelectorAll('.assignment-item');
+    
+    items.forEach(item => {
+        const status = item.dataset.status;
+        if (filter === 'all' || status === filter) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+function sortAssignments() {
+    const sort = document.getElementById('assignmentSort').value;
+    const list = document.getElementById('assignmentList');
+    const items = Array.from(list.getElementsByClassName('assignment-item'));
+    
+    items.sort((a, b) => {
+        if (sort === 'dueDate') {
+            return a.dataset.dueDate.localeCompare(b.dataset.dueDate);
+        } else if (sort === 'title') {
+            return a.dataset.title.localeCompare(b.dataset.title);
+        } else if (sort === 'submissions') {
+            return b.dataset.submissions - a.dataset.submissions;
+        }
+    });
+    
+    items.forEach(item => list.appendChild(item));
+}
+</script>
+{% endblock %} 

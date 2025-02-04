@@ -15,4 +15,13 @@ def admin_only(view_func):
             return redirect('home')
             
         return view_func(request, *args, **kwargs)
-    return wrapper 
+    return wrapper
+
+def student_required(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not hasattr(request.user, 'student'):
+            messages.error(request, 'Access denied. Student account required.')
+            return redirect('LearnPeak:home')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view 

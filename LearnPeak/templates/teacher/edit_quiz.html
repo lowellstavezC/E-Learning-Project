@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Quiz - {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Edit Quiz</h1>
+            <p class="text-gray-600">Course: {{ course.title }}</p>
+        </div>
+        <a href="{% url 'LearnPeak:manage_quizzes' course.id %}" 
+           class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+            ← Back to Quizzes
+        </a>
+    </div>
+
+    {% if messages %}
+    <div class="mt-4">
+        {% for message in messages %}
+            <div class="p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Quiz Form -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <form id="quizForm" method="POST" class="space-y-6">
+            {% csrf_token %}
+            <input type="hidden" name="quiz_type" id="quiz_type" value="{{ quiz.quiz_type }}">
+            
+            <!-- Quiz Details Section -->
+            <div class="space-y-6">
+                <!-- Title -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Quiz Title</label>
+                    <input type="text" name="title" required value="{{ quiz.title }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea name="description" rows="4"
+                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">{{ quiz.description }}</textarea>
+                </div>
+
+                <!-- Duration -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Time Limit (minutes)</label>
+                    <input type="number" name="duration" min="1" required value="{{ quiz.duration }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+
+                <!-- Quiz Type Selection -->
+                <div class="border-t pt-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-4">Quiz Type</label>
+                    <div class="flex space-x-4">
+                        <button type="button" id="externalBtn" 
+                                class="px-4 py-2 rounded-lg border-2 {% if quiz.quiz_type == 'external' %}border-blue-500 bg-blue-50{% endif %}"
+                                onclick="selectQuizType('external')">
+                            External Link
+                        </button>
+                        <button type="button" id="manualBtn"
+                                class="px-4 py-2 rounded-lg border-2 {% if quiz.quiz_type == 'manual' %}border-blue-500 bg-blue-50{% endif %}"
+                                onclick="selectQuizType('manual')">
+                            Manual Input
+                        </button>
+                    </div>
+                </div>
+
+                <!-- External Link Section -->
+                <div id="externalSection" class="{% if quiz.quiz_type != 'external' %}hidden{% endif %}">
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700">External Link</label>
+                        <input type="url" name="external_link" value="{{ quiz.external_link|default:'' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <!-- Manual Input Section -->
+                <div id="manualSection" class="{% if quiz.quiz_type != 'manual' %}hidden{% endif %}">
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700">Number of Questions</label>
+                        <input type="number" id="questionCount" min="1" max="50" value="1"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <button type="button" onclick="generateQuestions()"
+                                class="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            Update Questions
+                        </button>
+                    </div>
+                    <div id="questionsContainer"></div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex justify-end pt-6 border-t">
+                <button type="button" 
+                        onclick="updateQuiz({{ course.id }}, {{ quiz.id }})"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    Update Quiz
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function selectQuizType(type) {
+    console.log('Selecting quiz type:', type);
+    
+    // Update hidden input
+    document.getElementById('quiz_type').value = type;
+    
+    // Update button styles
+    document.getElementById('externalBtn').classList.remove('border-blue-500', 'bg-blue-50');
+    document.getElementById('manualBtn').classList.remove('border-blue-500', 'bg-blue-50');
+    document.getElementById(`${type}Btn`).classList.add('border-blue-500', 'bg-blue-50');
+    
+    // Show/hide sections
+    document.getElementById('externalSection').classList.toggle('hidden', type !== 'external');
+    document.getElementById('manualSection').classList.toggle('hidden', type !== 'manual');
+}
+
+function generateQuestions() {
+    console.log('Generating questions');
+    const count = parseInt(document.getElementById('questionCount').value);
+    if (count < 1) {
+        alert('Please enter a valid number of questions');
+        return;
+    }
+    
+    const container = document.getElementById('questionsContainer');
+    container.innerHTML = '';
+    
+    for (let i = 0; i < count; i++) {
+        const questionDiv = document.createElement('div');
+        questionDiv.className = `question-item ${i === 0 ? '' : 'hidden'}`;
+        questionDiv.dataset.index = i;
+        questionDiv.innerHTML = `
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Question ${i + 1}</label>
+                    <input type="text" name="questions[${i}][text]" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <input type="text" name="questions[${i}][option1]" placeholder="Option 1" required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <input type="text" name="questions[${i}][option2]" placeholder="Option 2" required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <input type="text" name="questions[${i}][option3]" placeholder="Option 3" required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <input type="text" name="questions[${i}][option4]" placeholder="Option 4" required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Correct Answer</label>
+                    <select name="questions[${i}][correct_answer]" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="1">Option 1</option>
+                        <option value="2">Option 2</option>
+                        <option value="3">Option 3</option>
+                        <option value="4">Option 4</option>
+                    </select>
+                </div>
+            </div>
+        `;
+        container.appendChild(questionDiv);
+    }
+    
+    updateNavigationButtons();
+}
+
+function updateQuiz(courseId, quizId) {
+    console.log('Updating quiz:', courseId, quizId);
+    const formData = new FormData(document.getElementById('quizForm'));
+    
+    fetch(`/teacher/course/${courseId}/quizzes/${quizId}/edit/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.href = `/teacher/course/${courseId}/quizzes/`;
+        } else {
+            throw new Error('Failed to update quiz');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating quiz. Please try again.');
+    });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const quizType = document.getElementById('quiz_type').value;
+    if (quizType) {
+        selectQuizType(quizType);
+    }
+    
+    // If there are existing questions, show navigation
+    const questionCount = document.querySelectorAll('.question-item').length;
+    if (questionCount > 0) {
+        updateNavigationButtons();
+    }
+});
+</script>
+{% endblock %} 

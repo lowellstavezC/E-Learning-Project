@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Navigation -->
+    <div class="mb-6 flex items-center space-x-4 text-sm">
+        <a href="{% url 'LearnPeak:student_dashboard' %}" class="text-gray-600 hover:text-gray-800">Dashboard</a>
+        <span class="text-gray-400">→</span>
+        <a href="{% url 'LearnPeak:student_course_detail' course.id %}" class="text-gray-600 hover:text-gray-800">{{ course.title }}</a>
+        <span class="text-gray-400">→</span>
+        <span class="font-semibold">{{ lesson.title }}</span>
+    </div>
+
+    <!-- Lesson Content -->
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ lesson.title }}</h1>
+        
+        <!-- Lesson Navigation -->
+        <div class="flex justify-between items-center mb-6">
+            {% if prev_lesson %}
+            <a href="{% url 'LearnPeak:view_lesson' course.id prev_lesson.id %}" 
+               class="text-blue-600 hover:text-blue-800">
+                ← Previous Lesson
+            </a>
+            {% else %}
+            <span></span>
+            {% endif %}
+
+            {% if next_lesson %}
+            <a href="{% url 'LearnPeak:view_lesson' course.id next_lesson.id %}" 
+               class="text-blue-600 hover:text-blue-800">
+                Next Lesson →
+            </a>
+            {% else %}
+            <span></span>
+            {% endif %}
+        </div>
+
+        <!-- Lesson Content -->
+        <div class="prose max-w-none">
+            {{ lesson.content|safe|linebreaks }}
+        </div>
+
+        <!-- Lesson File -->
+        {% if lesson.file %}
+        <div class="mt-8 p-4 bg-gray-50 rounded-lg">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Lesson Materials</h3>
+            <a href="{{ lesson.file.url }}" 
+               class="inline-flex items-center text-blue-600 hover:text-blue-800"
+               target="_blank">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z"></path>
+                </svg>
+                Download Material
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Course Progress -->
+    <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Course Progress</h2>
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ progress_percentage }}%"></div>
+        </div>
+        <p class="text-sm text-gray-600 mt-2">{{ progress_percentage }}% Complete</p>
+    </div>
+</div>
+{% endblock %} 

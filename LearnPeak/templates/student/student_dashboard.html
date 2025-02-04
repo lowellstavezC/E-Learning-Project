@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Dashboard{% endblock %}
+
+{% block head %}
+<!-- Inline critical CSS -->
+<style>
+    .dashboard-stat { @apply bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow; }
+    .stat-title { @apply font-semibold text-gray-900; }
+    .stat-value { @apply text-2xl; }
+    .stat-subtitle { @apply text-sm text-gray-600; }
+</style>
+<!-- Preload critical assets -->
+<link rel="preload" href="https://cdn.tailwindcss.com" as="style" crossorigin>
+<meta name="description" content="LearnPeak student dashboard - Access your courses, track progress, and manage your learning journey">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{% endblock %}
+
+{% block navigation_items %}
+    <nav class="flex space-x-4" aria-label="Main navigation">
+        <a href="#courses" class="text-gray-600 hover:text-gray-900" aria-label="My Courses">My Courses</a>
+        <a href="#progress" class="text-gray-600 hover:text-gray-900" aria-label="Progress">Progress</a>
+        <a href="#assignments" class="text-gray-600 hover:text-gray-900" aria-label="Assignments">Assignments</a>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-8 max-w-7xl">
+    <!-- Top Section with Welcome and Action Button -->
+    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-8">
+        <div class="mb-4 md:mb-0">
+            <h1 class="text-3xl font-bold text-gray-800">Welcome, {{ student.user.name }}!</h1>
+            <div class="mt-2 text-gray-600">
+                <p>Student ID: {{ student.student_id }}</p>
+                <p>Course of Study: {{ student.course_of_study }}</p>
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'LearnPeak:available_courses' %}" 
+               class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg 
+                      hover:bg-blue-700 transition-colors duration-200 shadow-sm hover:shadow-md">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                Browse Available Courses
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Enrolled Courses Section - Takes 2 columns -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">My Courses</h2>
+                {% if enrollments %}
+                    <div class="grid gap-6">
+                        {% for enrollment in enrollments %}
+                            <div class="bg-gray-50 rounded-lg p-6 hover:bg-gray-100 transition-colors duration-200">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-gray-800 mb-2">
+                                            {{ enrollment.course.title }}
+                                        </h3>
+                                        <p class="text-gray-600 mb-4">
+                                            {{ enrollment.course.description|truncatewords:20 }}
+                                        </p>
+                                    </div>
+                                    <span class="px-3 py-1 text-sm rounded-full 
+                                               {% if enrollment.status == 'active' %}bg-green-100 text-green-800
+                                               {% elif enrollment.status == 'completed' %}bg-blue-100 text-blue-800
+                                               {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ enrollment.status|title }}
+                                    </span>
+                                </div>
+                                <div class="mt-4 flex justify-end">
+                                    <a href="{% url 'LearnPeak:student_course_detail' enrollment.course.id %}" 
+                                       class="inline-flex items-center text-blue-600 hover:text-blue-800">
+                                        View Course
+                                        <svg class="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                  d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-8 bg-gray-50 rounded-lg">
+                        <p class="text-gray-600 mb-4">You are not enrolled in any courses yet.</p>
+                        <a href="{% url 'LearnPeak:available_courses' %}" 
+                           class="text-blue-600 hover:text-blue-800 font-semibold">
+                            Browse courses to get started →
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Activity Section - Takes 1 column -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-xl shadow-md p-6 sticky top-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Recent Activity</h2>
+                <div class="space-y-4">
+                    {% if recent_activities %}
+                        {% for activity in recent_activities %}
+                            <div class="border-b border-gray-100 pb-4 last:border-0">
+                                <p class="text-gray-800 mb-1">{{ activity.description }}</p>
+                                <span class="text-sm text-gray-500">{{ activity.timestamp|date:"M d, Y" }}</span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-6 bg-gray-50 rounded-lg">
+                            <p class="text-gray-600">No recent activity.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Defer non-critical JavaScript -->
+<script defer>
+    // Add any necessary JavaScript here
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize any dynamic features
+    });
+</script>
+{% endblock %} 

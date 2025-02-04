@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load quiz_filters %} 
+
+{% block title %}Quiz Results - {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-6 flex justify-between items-center">
+        <!-- Navigation breadcrumb -->
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'LearnPeak:course_detail' course.id %}" 
+               class="text-gray-600 hover:text-gray-800">
+                Course
+            </a>
+            <span class="text-gray-400">→</span>
+            <span class="font-semibold">{{ quiz.title }} Results</span>
+        </div>
+        
+        <div class="mt-6 flex space-x-4">
+            <a href="{% url 'LearnPeak:course_detail' course.id %}" 
+            class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                ← Back to Course Management
+            </a>
+            <a href="{% url 'LearnPeak:view_quiz_results' course.id %}" 
+            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                Course Quiz Results Overview
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold mb-6">{{ quiz.title }} Results</h1>
+
+        <table class="min-w-full">
+            <thead>
+                <tr class="border-b-2 border-gray-200">
+                    <th class="py-3 text-left">Student</th>
+                    <th class="py-3 text-left">Score</th>
+                    <th class="py-3 text-left">Status</th>
+                    <th class="py-3 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if results %}
+                    {% for result in results %}
+                    <tr class="border-b border-gray-200">
+                        <td class="py-3">{{ result.student.user.name }}</td>
+                        <td class="py-3">{{ result.score }}%</td>
+                        <td class="py-3">
+                            <span class="{% if result.passed %}text-green-600{% else %}text-red-600{% endif %}">
+                                {{ result.passed|yesno:"Pass,Fail" }}
+                            </span>
+                        </td>
+                        <td class="py-3">
+                            <a href="{% url 'LearnPeak:teacher_quiz_result' course.id quiz.id result.id %}"
+                               class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
+                                View Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="py-4 text-center text-gray-600">
+                            No quiz results available yet. Students need to take the quiz first.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <div class="mt-6 pt-4 border-t-2 border-gray-200">
+            <p class="text-xl">Average Score: {{ average_score|floatformat:1 }}%</p>
+        </div>
+    </div>
+</div>
+{% endblock %} 

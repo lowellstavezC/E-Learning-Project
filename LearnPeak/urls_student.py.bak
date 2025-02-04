@@ -1,0 +1,35 @@
+from django.urls import path
+from . import views_student
+
+app_name = 'LearnPeak'
+
+urlpatterns = [
+    # Dashboard & Course Management
+    path('student/dashboard/', views_student.student_dashboard, name='student_dashboard'),
+    path('student/available-courses/', views_student.available_courses, name='available_courses'),
+    path('student/course/<int:course_id>/', views_student.student_course_detail, name='student_course_detail'),
+    path('student/enroll/<int:course_id>/', views_student.enroll_course, name='enroll_course'),
+    
+    # Quiz URLs
+    path('student/course/<int:course_id>/quiz/<int:quiz_id>/', views_student.take_quiz, name='take_quiz'),
+    path('student/course/<int:course_id>/quiz/<int:quiz_id>/submit/', views_student.submit_quiz, name='submit_quiz'),
+    path('student/course/<int:course_id>/quiz/<int:quiz_id>/result/<int:result_id>/', 
+         views_student.student_quiz_result, name='student_quiz_result'),
+    
+    # Assignment URLs
+    path('student/course/<int:course_id>/assignment/<int:assignment_id>/', views_student.view_assignment, name='view_assignment'),
+    path('student/course/<int:course_id>/assignment/<int:assignment_id>/submit/', views_student.submit_assignment, name='submit_assignment'),
+    
+    # Exam URLs
+    path('course/<int:course_id>/exam/<int:exam_id>/', views_student.take_exam, name='take_exam'),
+    path('student/course/<int:course_id>/exam/<int:exam_id>/submit/', views_student.submit_exam, name='submit_exam'),
+    path('course/<int:course_id>/exam/<int:exam_id>/result/', views_student.exam_result, name='student_exam_result'),
+    
+    # Progress URLs
+    path('progress/', views_student.view_progress, name='student_progress'),
+    path('student/course/<int:course_id>/progress/', views_student.course_progress, name='course_progress'),
+    
+    # Lesson URLs
+    path('student/course/<int:course_id>/lesson/<int:lesson_id>/',
+         views_student.view_lesson, name='view_lesson'),
+] 

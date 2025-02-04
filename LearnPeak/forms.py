@@ -1,56 +1,31 @@
 from django import forms
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
-from .models import (
-    User, Course, Lesson, Material, Quiz, Question,
-    Assignment, LiveSession, Grades, Role, Student, Teacher
-)
+from .models import Course, Lesson, Quiz, Assignment, Question, Choice, Exam, QuizQuestion, ExamQuestion
+from django.utils import timezone
 
-class UserRegistrationForm(UserCreationForm):
-    role = forms.ModelChoiceField(queryset=Role.objects.all(), required=True)
-    course_of_study = forms.CharField(
-        max_length=100, 
-        required=False,
-        help_text='Required for students'
-    )
-    department = forms.CharField(
-        max_length=100, 
-        required=False,
-        help_text='Required for teachers'
-    )
+#<----------------Get the custom user model---------------->
+CustomUser = get_user_model()
 
+#<----------------Custom User Form for Admin Dashboard---------------->
+class CustomUserForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+    is_teacher = forms.BooleanField(required=False, label="Is Teacher")
+    is_superuser = forms.BooleanField(required=False, label="Is Admin")
+    
     class Meta:
-        model = User
-        fields = ['username', 'email', 'password1', 'password2', 'role']
-
-    def clean(self):
-        cleaned_data = super().clean()
-        role = cleaned_data.get('role')
-        
-        if role:
-            if role.role_name.lower() == 'student' and not cleaned_data.get('course_of_study'):
-                self.add_error('course_of_study', 'Course of study is required for students')
-            elif role.role_name.lower() == 'teacher' and not cleaned_data.get('department'):
-                self.add_error('department', 'Department is required for teachers')
-        
-        return cleaned_data
+        model = CustomUser
+        fields = ('email', 'password1', 'password2', 'is_teacher', 'is_superuser')
 
     def save(self, commit=True):
         user = super().save(commit=False)
+        user.username = self.cleaned_data['email']
+        user.is_teacher = self.cleaned_data.get('is_teacher', False)
+        user.is_superuser = self.cleaned_data.get('is_superuser', False)
+        if user.is_superuser:
+            user.is_staff = True
         if commit:
             user.save()
-            
-            # Create role-specific profile
-            if self.cleaned_data['role'].role_name.lower() == 'student':
-                Student.objects.create(
-                    user=user,
-                    course_of_study=self.cleaned_data.get('course_of_study', 'Not specified')
-                )
-            elif self.cleaned_data['role'].role_name.lower() == 'teacher':
-                Teacher.objects.create(
-                    user=user,
-                    department=self.cleaned_data.get('department', 'Not specified')
-                )
-                
         return user
 
 class LoginForm(forms.Form):
@@ -60,7 +35,7 @@ class LoginForm(forms.Form):
 class CourseForm(forms.ModelForm):
     class Meta:
         model = Course
-        fields = ['title', 'description', 'category', 'teacher']
+        fields = ['title', 'description']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
         }
@@ -68,47 +43,129 @@ class CourseForm(forms.ModelForm):
 class LessonForm(forms.ModelForm):
     class Meta:
         model = Lesson
-        fields = ['title', 'content', 'course']
+        fields = ['title', 'content', 'file']
         widgets = {
-            'content': forms.Textarea(attrs={'rows': 6}),
+            'title': forms.TextInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm'
+            }),
+            'content': forms.Textarea(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                'rows': 4
+            }),
+            'file': forms.FileInput(attrs={
+                'class': 'mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none'
+            })
         }
-
-class MaterialForm(forms.ModelForm):
-    class Meta:
-        model = Material
-        fields = ['title', 'file', 'file_type', 'lesson']
 
 class QuizForm(forms.ModelForm):
     class Meta:
         model = Quiz
-        fields = ['title', 'course']
+        fields = ['title', 'description', 'duration', 'quiz_type', 'external_link']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                'rows': 4
+            }),
+            'duration': forms.NumberInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                'min': '1'
+            }),
+            'quiz_type': forms.HiddenInput(),
+            'external_link': forms.URLInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                'placeholder': 'https://forms.google.com/... or https://quizizz.com/...'
+            })
+        }
 
-class QuestionForm(forms.ModelForm):
+class QuizQuestionForm(forms.ModelForm):
     class Meta:
-        model = Question
-        fields = ['quiz', 'text', 'question_type', 'points', 'correct_answer']
+        model = QuizQuestion
+        fields = ['question_text', 'option1', 'option2', 'option3', 'option4', 'correct_answer']
+        widgets = {
+            'question_text': forms.Textarea(attrs={'class': 'form-control'}),
+            'option1': forms.TextInput(attrs={'class': 'form-control'}),
+            'option2': forms.TextInput(attrs={'class': 'form-control'}),
+            'option3': forms.TextInput(attrs={'class': 'form-control'}),
+            'option4': forms.TextInput(attrs={'class': 'form-control'}),
+            'correct_answer': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
 
 class AssignmentForm(forms.ModelForm):
     class Meta:
         model = Assignment
-        fields = ['title', 'description', 'deadline', 'course']
+        fields = ['title', 'description', 'deadline', 'file']
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 4}),
+            'title': forms.TextInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                'rows': 4
+            }),
+            'deadline': forms.DateTimeInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                'type': 'datetime-local'
+            }),
+            'file': forms.FileInput(attrs={
+                'class': 'mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100'
+            })
         }
 
-class GradeSubmissionForm(forms.ModelForm):
+class ExamForm(forms.ModelForm):
     class Meta:
-        model = Grades
-        fields = ['grade', 'feedback']
+        model = Exam
+        fields = ['title', 'description', 'duration', 'exam_type', 'external_link', 'passing_grade', 'points']
         widgets = {
-            'feedback': forms.Textarea(attrs={'rows': 4}),
+            'title': forms.TextInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                'rows': 4
+            }),
+            'duration': forms.NumberInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                'min': '1'
+            }),
+            'passing_grade': forms.NumberInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                'min': '0',
+                'max': '100'
+            }),
+            'exam_type': forms.HiddenInput(),
+            'external_link': forms.URLInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm',
+                'placeholder': 'https://forms.google.com/... or https://quizizz.com/...'
+            })
         }
 
-class LiveSessionForm(forms.ModelForm):
+    def clean(self):
+        cleaned_data = super().clean()
+        exam_date = cleaned_data.get('exam_date')
+        passing_marks = cleaned_data.get('passing_marks')
+        total_marks = cleaned_data.get('total_marks')
+
+        if exam_date and exam_date < timezone.now():
+            raise forms.ValidationError("Exam date cannot be in the past")
+
+        if passing_marks and total_marks and passing_marks > total_marks:
+            raise forms.ValidationError("Passing marks cannot be greater than total marks")
+
+        return cleaned_data
+
+class ExamQuestionForm(forms.ModelForm):
     class Meta:
-        model = LiveSession
-        fields = ['title', 'schedule', 'course']
+        model = ExamQuestion
+        fields = ['text', 'option1', 'option2', 'option3', 'option4', 'correct_answer']
         widgets = {
-            'scheduled_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'description': forms.Textarea(attrs={'rows': 4}),
-        } 
+            'text': forms.Textarea(attrs={'class': 'form-control'}),
+            'option1': forms.TextInput(attrs={'class': 'form-control'}),
+            'option2': forms.TextInput(attrs={'class': 'form-control'}),
+            'option3': forms.TextInput(attrs={'class': 'form-control'}),
+            'option4': forms.TextInput(attrs={'class': 'form-control'}),
+            'correct_answer': forms.Select(attrs={'class': 'form-control'}),
+        }
+

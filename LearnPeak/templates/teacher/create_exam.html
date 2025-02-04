@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Exam - {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold">Create Exam - {{ course.title }}</h1>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <form method="POST" id="examForm">
+            {% csrf_token %}
+            
+            <!-- Exam Type Selection -->
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Exam Type</label>
+                <div class="flex gap-4">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="exam_type" value="manual" checked 
+                               class="form-radio" onchange="toggleExamType()">
+                        <span class="ml-2">Manual Exam</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="exam_type" value="external" 
+                               class="form-radio" onchange="toggleExamType()">
+                        <span class="ml-2">External Exam</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Manual Exam Form -->
+            <div id="manualExamForm">
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Title</label>
+                    <input type="text" name="title" required
+                           class="w-full px-3 py-2 border rounded-lg">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Description</label>
+                    <textarea name="description" rows="3" 
+                              class="w-full px-3 py-2 border rounded-lg"></textarea>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Duration (minutes)</label>
+                    <input type="number" name="duration" required min="1"
+                           class="w-full px-3 py-2 border rounded-lg">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Passing Grade (%)</label>
+                    <input type="number" name="passing_grade" required min="0" max="100" value="60"
+                           class="w-full px-3 py-2 border rounded-lg">
+                </div>
+
+                <!-- Number of Questions Input -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Number of Questions</label>
+                    <div class="flex gap-4">
+                        <input type="number" id="questionNumberInput" min="1" value="1"
+                               class="w-32 px-3 py-2 border rounded-lg">
+                        <button type="button" onclick="generateQuestions()" 
+                                class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                            Generate Questions
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Questions Section -->
+                <div id="questionsContainer" class="space-y-6">
+                    <!-- Questions will be added here dynamically -->
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="flex justify-between mt-6 mb-6" id="navigationButtons" style="display: none;">
+                    <button type="button" onclick="previousQuestion()" 
+                            class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                        Previous Question
+                    </button>
+                    <span id="questionCounter" class="py-2 font-bold">
+                        Question 1 of 1
+                    </span>
+                    <button type="button" onclick="nextQuestion()" 
+                            class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                        Next Question
+                    </button>
+                </div>
+            </div>
+
+            <!-- External Exam Form -->
+            <div id="externalExamForm" style="display: none;">
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">External Exam Title</label>
+                    <input type="text" name="external_title" 
+                           class="w-full px-3 py-2 border rounded-lg">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">External Link</label>
+                    <input type="url" name="external_link" 
+                           class="w-full px-3 py-2 border rounded-lg">
+                </div>
+            </div>
+
+            <input type="hidden" name="question_count" id="questionCount" value="0">
+            
+            <div class="flex justify-end">
+                <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
+                    Create Exam
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let currentQuestion = 0;
+let totalQuestions = 0;
+
+function toggleExamType() {
+    const manualForm = document.getElementById('manualExamForm');
+    const externalForm = document.getElementById('externalExamForm');
+    const examType = document.querySelector('input[name="exam_type"]:checked').value;
+    
+    if (examType === 'manual') {
+        manualForm.style.display = 'block';
+        externalForm.style.display = 'none';
+    } else {
+        manualForm.style.display = 'none';
+        externalForm.style.display = 'block';
+    }
+}
+
+function generateQuestions() {
+    const container = document.getElementById('questionsContainer');
+    container.innerHTML = ''; // Clear existing questions
+    const numQuestions = parseInt(document.getElementById('questionNumberInput').value);
+    totalQuestions = numQuestions;
+    
+    for (let i = 0; i < numQuestions; i++) {
+        addQuestion(i);
+    }
+    
+    // Show only the first question initially
+    showQuestion(0);
+    document.getElementById('navigationButtons').style.display = 'flex';
+    updateQuestionCounter();
+}
+
+function addQuestion(index) {
+    const container = document.getElementById('questionsContainer');
+    const questionDiv = document.createElement('div');
+    questionDiv.className = 'question-div p-4 border rounded-lg mb-4';
+    questionDiv.style.display = 'none'; // Hide initially
+    questionDiv.innerHTML = `
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Question ${index + 1}</label>
+            <textarea name="questions[${index}][text]" required class="w-full px-3 py-2 border rounded-lg"></textarea>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Option 1</label>
+                <input type="text" name="questions[${index}][option1]" required class="w-full px-3 py-2 border rounded-lg">
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Option 2</label>
+                <input type="text" name="questions[${index}][option2]" required class="w-full px-3 py-2 border rounded-lg">
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Option 3</label>
+                <input type="text" name="questions[${index}][option3]" required class="w-full px-3 py-2 border rounded-lg">
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Option 4</label>
+                <input type="text" name="questions[${index}][option4]" required class="w-full px-3 py-2 border rounded-lg">
+            </div>
+        </div>
+        
+        <div>
+            <label class="block text-gray-700 text-sm font-bold mb-2">Correct Answer</label>
+            <select name="questions[${index}][correct_answer]" required class="w-full px-3 py-2 border rounded-lg">
+                <option value="1">Option 1</option>
+                <option value="2">Option 2</option>
+                <option value="3">Option 3</option>
+                <option value="4">Option 4</option>
+            </select>
+        </div>
+    `;
+    
+    container.appendChild(questionDiv);
+    document.getElementById('questionCount').value = totalQuestions;
+}
+
+function showQuestion(index) {
+    const questions = document.querySelectorAll('.question-div');
+    questions.forEach((q, i) => {
+        q.style.display = i === index ? 'block' : 'none';
+    });
+    currentQuestion = index;
+    updateQuestionCounter();
+}
+
+function nextQuestion() {
+    if (currentQuestion < totalQuestions - 1) {
+        showQuestion(currentQuestion + 1);
+    }
+}
+
+function previousQuestion() {
+    if (currentQuestion > 0) {
+        showQuestion(currentQuestion - 1);
+    }
+}
+
+function updateQuestionCounter() {
+    document.getElementById('questionCounter').textContent = 
+        `Question ${currentQuestion + 1} of ${totalQuestions}`;
+}
+</script>
+{% endblock %} 

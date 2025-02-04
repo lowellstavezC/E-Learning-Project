@@ -29,8 +29,8 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    '3eb8-112-208-72-180.ngrok-free.app',
-    '.ngrok-free.app',
+    '.ngrok.io',
+    '*',
 ]
 
 
@@ -135,9 +135,6 @@ STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Add for authentication
-AUTH_USER_MODEL = 'LearnPeak.User'
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -152,14 +149,14 @@ EMAIL_HOST_USER = 'your-email@gmail.com'  # Your email
 EMAIL_HOST_PASSWORD = 'your-app-password'  # Your email app password
 
 # Add or update these settings
-LOGIN_URL = 'login'  # Remove 'accounts/' from the path
+LOGIN_URL = 'LearnPeak:login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
 # CSRF settings
 CSRF_COOKIE_SECURE = False  # Set to True in production
 CSRF_COOKIE_HTTPONLY = False
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
+CSRF_TRUSTED_ORIGINS = ['https://*.ngrok.io', 'https://*.ngrok-free.app']
 
 # Make sure these middleware classes are present and in this order
 MIDDLEWARE = [
@@ -177,9 +174,6 @@ CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
 SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
-
-# Make sure your ALLOWED_HOSTS includes your domain
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Cache settings
 CACHES = {
@@ -209,3 +203,5 @@ LOGGING = {
         },
     },
 }
+
+AUTH_USER_MODEL = 'LearnPeak.User'

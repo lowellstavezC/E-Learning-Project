@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,44 +6,138 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LearnPeak - {% block title %}{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Add responsive meta tags -->
+    <meta name="theme-color" content="#ffffff">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-gray-50">
-    <!-- Navigation -->
     <nav class="fixed w-full bg-white/80 backdrop-blur-sm z-50 border-b border-gray-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <a href="{% url 'LearnPeak:get_started' %}" class="text-2xl font-bold text-gray-900">
+                    {% if user.is_authenticated %}
+                        {% if user.is_superuser %}
+                            <a href="{% url 'LearnPeak:admin_dashboard' %}" class="text-xl sm:text-2xl font-bold text-gray-900">
+                        {% elif user.teacher %}
+                            <a href="{% url 'LearnPeak:teacher_dashboard' %}" class="text-xl sm:text-2xl font-bold text-gray-900">
+                        {% else %}
+                            <a href="{% url 'LearnPeak:student_dashboard' %}" class="text-xl sm:text-2xl font-bold text-gray-900">
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'LearnPeak:get_started' %}" class="text-xl sm:text-2xl font-bold text-gray-900">
+                    {% endif %}
                         Learn<span class="text-gray-600">Peak</span>
                     </a>
                 </div>
-                <div class="flex items-center space-x-6">
-                    {% block navigation_items %}
-                    <a href="#courses" class="text-gray-600 hover:text-gray-900">Courses</a>
-                    <a href="#features" class="text-gray-600 hover:text-gray-900">Features</a>
-                    <a href="{% url 'LearnPeak:login' %}" class="text-gray-600 hover:text-gray-900">Login</a>
-                    <a href="{% url 'LearnPeak:register' %}" class="bg-gray-900 text-white px-5 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+                <!-- Mobile menu button -->
+                <div class="flex items-center lg:hidden">
+                    <button type="button" class="text-gray-600 hover:text-gray-900 focus:outline-none" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:flex items-center space-x-6">
+                    {% if user.is_authenticated %}
+                        {% if user.is_superuser %}
+                            <a href="{% url 'LearnPeak:admin_dashboard' %}" class="text-gray-600 hover:text-gray-900">Admin Dashboard</a>
+                        {% elif user.teacher %}
+                            <a href="{% url 'LearnPeak:teacher_dashboard' %}" class="text-gray-600 hover:text-gray-900">Teacher Dashboard</a>
+                        {% else %}
+                            <a href="{% url 'LearnPeak:student_dashboard' %}" class="text-gray-600 hover:text-gray-900">Student Dashboard</a>
+                        {% endif %}
+                        <a href="{% url 'LearnPeak:logout' %}" class="bg-gray-900 text-white px-5 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+                            Logout
+                        </a>
+                    {% else %}
+                        <a href="#courses" class="text-gray-600 hover:text-gray-900">Courses</a>
+                        <a href="#features" class="text-gray-600 hover:text-gray-900">Features</a>
+                        <a href="{% url 'LearnPeak:login' %}" class="text-gray-600 hover:text-gray-900">Login</a>
+                        <a href="{% url 'LearnPeak:register' %}" class="bg-gray-900 text-white px-5 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+                            Start Learning
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Navigation Menu -->
+        <div id="mobile-menu" class="hidden lg:hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-b">
+                {% if user.is_authenticated %}
+                    {% if user.is_superuser %}
+                        <a href="{% url 'LearnPeak:admin_dashboard' %}" class="block px-3 py-2 text-gray-600 hover:text-gray-900">Admin Dashboard</a>
+                    {% elif user.teacher %}
+                        <a href="{% url 'LearnPeak:teacher_dashboard' %}" class="block px-3 py-2 text-gray-600 hover:text-gray-900">Teacher Dashboard</a>
+                    {% else %}
+                        <a href="#courses" class="block px-3 py-2 text-gray-600 hover:text-gray-900">My Courses</a>
+                        <a href="#progress" class="block px-3 py-2 text-gray-600 hover:text-gray-900">Progress</a>
+                        <a href="#assignments" class="block px-3 py-2 text-gray-600 hover:text-gray-900">Assignments</a>
+                    {% endif %}
+                    <form method="POST" action="{% url 'LearnPeak:logout' %}" class="block px-3 py-2">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full text-left bg-gray-900 text-white px-5 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+                            Logout
+                        </button>
+                    </form>
+                {% else %}
+                    <a href="#courses" class="block px-3 py-2 text-gray-600 hover:text-gray-900">Courses</a>
+                    <a href="#features" class="block px-3 py-2 text-gray-600 hover:text-gray-900">Features</a>
+                    <a href="{% url 'LearnPeak:login' %}" class="block px-3 py-2 text-gray-600 hover:text-gray-900">Login</a>
+                    <a href="{% url 'LearnPeak:register' %}" class="block px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
                         Start Learning
                     </a>
-                    {% endblock %}
-                </div>
+                {% endif %}
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main>
+    <!-- Alert Messages -->
+    {% if messages %}
+        <div class="mt-4">
+            {% for message in messages %}
+                <div class="p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <main class="pt-16">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-gray-50 border-t border-gray-100 py-12">
+    <footer class="bg-gray-50 border-t border-gray-100 py-8 sm:py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-600">
-            <p>&copy; 2024 LearnPeak. All rights reserved.</p>
+            <p class="text-sm sm:text-base">&copy; 2024 LearnPeak. All rights reserved.</p>
         </div>
     </footer>
 
     {% block extra_scripts %}{% endblock %}
+    
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('mobile-menu');
+            const menuButton = event.target.closest('button');
+            if (!menu.classList.contains('hidden') && !menuButton) {
+                if (!menu.contains(event.target)) {
+                    menu.classList.add('hidden');
+                }
+            }
+        });
+
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 1024) {
+                document.getElementById('mobile-menu').classList.add('hidden');
+            }
+        });
+    </script>
 </body>
 </html> 

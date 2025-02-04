@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Navigation -->
+    <div class="mb-6 flex items-center space-x-4 text-sm">
+        <a href="{% url 'LearnPeak:student_dashboard' %}" class="text-gray-600 hover:text-gray-800">Dashboard</a>
+        <span class="text-gray-400">→</span>
+        <span class="font-semibold">Available Courses</span>
+    </div>
+
+    <!-- Available Courses -->
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">Available Courses</h1>
+        
+        {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+            <div class="p-4 {% if message.tags == 'success' %}bg-green-100 text-green-700{% else %}bg-yellow-100 text-yellow-700{% endif %} rounded-lg">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if available_courses %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for course in available_courses %}
+                    <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                        <div class="p-6">
+                            <h2 class="text-xl font-semibold text-gray-800 mb-2">{{ course.title }}</h2>
+                            <p class="text-gray-600 mb-4">{{ course.description|truncatewords:30 }}</p>
+                            <div class="text-sm text-gray-500 mb-4">
+                                <p>Teacher: {{ course.teacher.user.name }}</p>
+                                <p>Created: {{ course.created_at|date:"M d, Y" }}</p>
+                            </div>
+                            <form method="POST" action="{% url 'LearnPeak:enroll_course' course.id %}">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                        class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 
+                                               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                    Enroll Now
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-gray-600 text-center py-8">No courses available for enrollment at this time.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

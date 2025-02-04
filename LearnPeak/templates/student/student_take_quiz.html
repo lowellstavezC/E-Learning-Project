@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Take Quiz - {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-3xl mx-auto">
+        <!-- Quiz Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">{{ quiz.title }}</h1>
+            <p class="text-gray-600 mb-4">{{ quiz.description }}</p>
+            <div class="flex items-center justify-between">
+                <span class="text-gray-600">Duration: {{ quiz.duration }} minutes</span>
+                <div id="timer" class="text-lg font-semibold text-blue-600"></div>
+            </div>
+        </div>
+
+        <!-- Quiz Form -->
+        <form method="post" id="quizForm">
+            {% csrf_token %}
+            {{ form.answers }}
+            
+            <div class="space-y-8">
+                {% for question in quiz.questions.all %}
+                    <div class="bg-white rounded-lg shadow-md p-6" data-question-id="{{ question.id }}">
+                        <p class="text-lg font-medium text-gray-800 mb-4">
+                            {{ forloop.counter }}. {{ question.text }}
+                        </p>
+                        <div class="space-y-3">
+                            {% for i in "1234"|make_list %}
+                                <label class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
+                                    <input type="radio" 
+                                           name="question_{{ question.id }}" 
+                                           value="{{ i }}"
+                                           class="form-radio h-5 w-5 text-blue-600">
+                                    <span class="text-gray-700">
+                                        {% if i == "1" %}{{ question.option1 }}
+                                        {% elif i == "2" %}{{ question.option2 }}
+                                        {% elif i == "3" %}{{ question.option3 }}
+                                        {% else %}{{ question.option4 }}
+                                        {% endif %}
+                                    </span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="mt-8 flex justify-between">
+                <a href="{% url 'LearnPeak:student_course_detail' course.id %}" 
+                   class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600">
+                    Cancel
+                </a>
+                <button type="submit" 
+                        class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    Submit Quiz
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Timer functionality
+    let timeLeft = {{ quiz.duration }} * 60; // Convert minutes to seconds
+    const timerDisplay = document.getElementById('timer');
+    
+    function updateTimer() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (timeLeft <= 0) {
+            document.getElementById('quizForm').submit();
+        } else {
+            timeLeft--;
+            setTimeout(updateTimer, 1000);
+        }
+    }
+    
+    updateTimer();
+
+    // Form submission handling
+    document.getElementById('quizForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Collect all answers
+        const answers = {};
+        const questions = document.querySelectorAll('[data-question-id]');
+        
+        questions.forEach(question => {
+            const questionId = question.dataset.questionId;
+            const selectedAnswer = document.querySelector(`input[name="question_${questionId}"]:checked`);
+            answers[questionId] = selectedAnswer ? selectedAnswer.value : null;
+        });
+        
+        // Update hidden form field with JSON answers
+        document.querySelector('input[name="answers"]').value = JSON.stringify(answers);
+        
+        // Submit the form
+        this.submit();
+    });
+</script>
+{% endblock %}
+{% endblock %} 

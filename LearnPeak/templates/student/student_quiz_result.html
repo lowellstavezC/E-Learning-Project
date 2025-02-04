@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}Quiz Result - {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-3xl mx-auto">
+        <!-- Quiz Result Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h1 class="text-2xl font-bold text-gray-800 mb-4">Quiz Results: {{ quiz.title }}</h1>
+            <div class="flex items-center justify-between mb-4">
+                <div class="text-gray-600">
+                    <p>Course: {{ course.title }}</p>
+                    <p>Completed: {{ result.completed_at|date:"M d, Y H:i" }}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-2xl font-bold {% if result.passed %}text-green-600{% else %}text-red-600{% endif %}">
+                        Score: {{ result.score }}%
+                    </p>
+                    <p class="text-gray-600">
+                        Status: {% if result.passed %}Passed{% else %}Failed{% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Question Review -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Question Review</h2>
+            {% for question, answer in result.answers.items %}
+                <div class="mb-6 pb-6 border-b border-gray-200 last:border-0">
+                    <p class="text-lg font-medium text-gray-800 mb-3">{{ forloop.counter }}. {{ question }}</p>
+                    <div class="pl-4">
+                        <p class="text-gray-600 mb-2">Your Answer: {{ answer }}</p>
+                        <p class="text-gray-600">
+                            Correct Answer: 
+                            <span class="{% if answer == correct_answers|get_item:question %}text-green-600{% else %}text-red-600{% endif %}">
+                                {{ correct_answers|get_item:question }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Teacher Feedback -->
+        {% if result.teacher_feedback %}
+            <div class="bg-white rounded-lg shadow-md p-6 mt-8">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Teacher Feedback</h2>
+                <p class="text-gray-600">{{ result.teacher_feedback }}</p>
+            </div>
+        {% endif %}
+
+        <!-- Navigation Buttons -->
+        <div class="mt-8 flex justify-between">
+            <a href="{% url 'LearnPeak:student_course_detail' course.id %}" 
+               class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600">
+                Back to Course
+            </a>
+            {% if not result.passed %}
+                <a href="{% url 'LearnPeak:take_quiz' course.id quiz.id %}" 
+                   class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    Retake Quiz
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,190 @@
+first i want you to analyze my folder
+
+E-LearningCode
+	elearning
+		elearning
+			__pycahce__
+			__init__.py
+			asgi.py
+			settings.py
+			urls.py
+			views.py
+			wsgi.py
+		myenv
+			include
+			Lib
+			Scripts
+			pyvenv.cfg
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+now ia want a help in making a modern website called e learning(suggest a nice modern name for the website) using these text stack
+
+Text Stacks
+✅ Backend: Use FastAPI (Python) → It's lightweight, asynchronous, and easy to set up.
+✅ Database: SQLite3 → It's file-based, fast, and requires no external setup.
+✅ Storage: Local Storage → Faster development without the hassle of AWS S3 configuration.
+✅ Authentication: JWT → Simple and easy to integrate with FastAPI.
+✅ Frontend:Tailwind CSS
+
+
+and my erd is this
+
+
+Table Role {
+    id int [primary key]
+    role_name varchar
+    created_at datetime
+    updated_at datetime
+}
+
+Table User {
+    id int [primary key]
+    name varchar
+    email varchar [unique]
+    password varchar
+    role_id int [ref: > Role.id]
+    created_at datetime
+    updated_at datetime
+}
+
+Table Admin {
+    id int [primary key]
+    user_id int [ref: > User.id]
+    created_at datetime
+    updated_at datetime
+}
+
+Table Teacher {
+    id int [primary key]
+    user_id int [ref: > User.id]
+    department varchar
+    created_at datetime
+    updated_at datetime
+}
+
+Table Student {
+    id int [primary key]
+    user_id int [ref: > User.id]
+    course_of_study varchar
+    created_at datetime
+    updated_at datetime
+}
+
+Table CourseCategory {
+    id int [primary key]
+    name varchar
+    description text
+    created_at datetime
+    updated_at datetime
+}
+
+Table Course {
+    id int [primary key]
+    title varchar
+    description text
+    category_id int [ref: > CourseCategory.id]
+    teacher_id int [ref: > Teacher.id]
+    created_at datetime
+    updated_at datetime
+}
+
+Table Lesson {
+    id int [primary key]
+    course_id int [ref: > Course.id]
+    title varchar
+    content text
+    created_at datetime
+    updated_at datetime
+}
+
+Table Quiz {
+    id int [primary key]
+    course_id int [ref: > Course.id]
+    title varchar
+    created_at datetime
+    updated_at datetime
+}
+
+Table Assignment {
+    id int [primary key]
+    course_id int [ref: > Course.id]
+    title varchar
+    description text
+    deadline datetime
+    created_at datetime
+    updated_at datetime
+}
+
+Table LiveSession {
+    id int [primary key]
+    course_id int [ref: > Course.id]
+    title varchar
+    schedule datetime
+    created_at datetime
+    updated_at datetime
+}
+
+Table Discussion {
+    id int [primary key]
+    course_id int [ref: > Course.id]
+    user_id int [ref: > User.id]
+    content text
+    created_at datetime
+    updated_at datetime
+}
+
+Table Enrollment {
+    id int [primary key]
+    student_id int [ref: > Student.id]
+    course_id int [ref: > Course.id]
+    created_at datetime
+}
+
+Table Grades {
+    id int [primary key]
+    student_id int [ref: > Student.id]
+    course_id int [ref: > Course.id]
+    assignment_id int [ref: > Assignment.id]
+    quiz_id int [ref: > Quiz.id]
+    grade float
+    feedback text
+    updated_at datetime
+}
+
+Table Certificate {
+    id int [primary key]
+    student_id int [ref: > Student.id]
+    course_id int [ref: > Course.id]
+    issued_date datetime
+}
+
+Table Notification {
+    id int [primary key]
+    user_id int [ref: > User.id]
+    message text
+    notification_type varchar
+    status varchar
+    created_at datetime
+}
+
+Table SystemLog {
+    id int [primary key]
+    admin_id int [ref: > Admin.id]
+    action text
+    timestamp datetime
+}
+
+

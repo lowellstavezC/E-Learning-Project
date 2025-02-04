@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load exam_filters %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold mb-6">Course Exam Results Overview</h1>
+        
+        <div class="mb-6">
+            <a href="{% url 'LearnPeak:course_detail' course.id %}" 
+               class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                ← Back to Course Management
+            </a>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full border-b-2 border-gray-200">
+                <thead>
+                    <tr class="border-b-2 border-gray-200">
+                        <th class="py-3 text-left">Student</th>
+                        {% for exam in exams %}
+                            <th class="py-3 text-left">{{ exam.title }}</th>
+                        {% endfor %}
+                        <th class="py-3 text-left">Average</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student, results in student_results.items %}
+                    <tr class="border-b border-gray-200">
+                        <td class="py-3">{{ student.user.name }}</td>
+                        {% for exam in exams %}
+                            {% with exam_result=results|get_exam_result:exam %}
+                            <td class="py-3">
+                                {% if exam_result %}
+                                    {{ exam_result.score }}%
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            {% endwith %}
+                        {% endfor %}
+                        <td class="py-3 font-semibold">
+                            {{ results|average_exam_score|floatformat:1 }}%
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

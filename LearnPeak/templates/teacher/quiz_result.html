@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Quiz Result - {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-6 flex justify-between items-center">
+        <!-- Navigation breadcrumb -->
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'LearnPeak:course_detail' course.id %}" 
+               class="text-gray-600 hover:text-gray-800">
+                Course
+            </a>
+            <span class="text-gray-400">→</span>
+            <a href="{% url 'LearnPeak:quiz_results_list' course.id quiz.id %}"
+               class="text-gray-600 hover:text-gray-800">
+                {{ quiz.title }} Results
+            </a>
+            <span class="text-gray-400">→</span>
+            <span class="font-semibold">Student Result</span>
+        </div>
+        
+        <!-- View matrix button -->
+        <a href="{% url 'LearnPeak:view_quiz_results' course.id %}" 
+           class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+            Course Quiz Results Overview
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold mb-6">{{ quiz_result.student.user.name }}'s {{ quiz.title }}</h1>
+        
+        <div class="space-y-4">
+            <div class="p-4 bg-gray-50 rounded">
+                <p class="text-gray-600">Student:</p>
+                <p class="text-xl font-semibold">{{ quiz_result.student.user.name }}</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded">
+                <p class="text-gray-600">Quiz:</p>
+                <p class="text-xl font-semibold">{{ quiz.title }}</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded">
+                <p class="text-gray-600">Score:</p>
+                <p class="text-xl font-semibold">{{ quiz_result.score }}%</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded">
+                <p class="text-gray-600">Status:</p>
+                <p class="text-xl font-semibold {% if quiz_result.passed %}text-green-600{% else %}text-red-600{% endif %}">
+                    {{ quiz_result.passed|yesno:"Passed,Failed" }}
+                </p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded">
+                <p class="text-gray-600">Time:</p>
+                <p class="text-xl font-semibold">{{ quiz_result.completion_time|date:"F j, Y g:i A" }}</p>
+            </div>
+        </div>
+
+        <div class="mt-6 p-6 bg-gray-50 rounded-lg">
+            <h2 class="text-xl font-semibold mb-4">Teacher Feedback</h2>
+            <form method="POST" action="{% url 'LearnPeak:grade_quiz' course.id quiz.id quiz_result.id %}">
+                {% csrf_token %}
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Provide Feedback</label>
+                        <textarea name="feedback" rows="4" 
+                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            placeholder="Enter your feedback for the student...">{{ quiz_result.teacher_feedback }}</textarea>
+                    </div>
+                    <div>
+                        <button type="submit" 
+                            class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                            Submit Feedback
+                        </button>
+                    </div>
+                </div>
+            </form>
+            
+            {% if quiz_result.teacher_feedback %}
+            <div class="mt-4 p-4 bg-white rounded-lg">
+                <h3 class="font-medium text-gray-700 mb-2">Previous Feedback</h3>
+                <p class="text-gray-600">{{ quiz_result.teacher_feedback }}</p>
+                <p class="text-sm text-gray-500 mt-2">Last updated: {{ quiz_result.feedback_date|date:"F j, Y g:i A" }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mt-6 flex space-x-4">
+            <a href="{% url 'LearnPeak:quiz_results_list' course.id quiz.id %}" 
+               class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                ← Back to Quiz Results
+            </a>
+            <a href="{% url 'LearnPeak:view_quiz_results' course.id %}" 
+               class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                View Course Quiz Overview
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,49 @@
+{% extends '../base.html' %}
+{% load static %}
+
+{% block title %}{{ action }} User | LearnPeak{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-gray-50">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="bg-white rounded-lg shadow-sm">
+            <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                <h1 class="text-xl font-semibold text-gray-900">{{ action }} User</h1>
+                <a href="{% url 'LearnPeak:user_list' %}" class="action-button">
+                    <span class="flex items-center">
+                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        </svg>
+                        Back
+                    </span>
+                </a>
+            </div>
+            
+            <div class="px-4 py-3">
+                <form method="POST" class="space-y-4">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div>
+                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            {{ field.label }}
+                        </label>
+                        <div class="mt-1">
+                            {{ field }}
+                        </div>
+                        {% if field.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="flex justify-end">
+                        <button type="submit" class="action-button">
+                            {{ action }} User
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

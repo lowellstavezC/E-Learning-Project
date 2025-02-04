@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load quiz_filters %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold mb-6">Course Quiz Results Overview</h1>
+
+        <div class="mb-6">
+            <a href="{% url 'LearnPeak:course_detail' course.id %}" 
+               class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                ← Back to Course Management
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="border-b-2 border-gray-200">
+                        <th class="py-3 text-left">Student</th>
+                        {% for quiz in quizzes %}
+                        <th class="py-3 text-left">{{ quiz.title }}</th>
+                        {% endfor %}
+                        <th class="py-3 text-left">Average</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student, results in student_results.items %}
+                    <tr class="border-b border-gray-200">
+                        <td class="py-3">{{ student.user.name }}</td>
+                        {% for quiz in quizzes %}
+                            {% with quiz_result=results|get_quiz_result:quiz %}
+                            <td class="py-3">
+                                {% if quiz_result %}
+                                    <span class="{% if quiz_result.passed %}text-green-600{% else %}text-red-600{% endif %}">
+                                        {{ quiz_result.score }}%
+                                    </span>
+                                {% else %}
+                                    <span class="text-gray-400">Not taken</span>
+                                {% endif %}
+                            </td>
+                            {% endwith %}
+                        {% endfor %}
+                        <td class="py-3 font-medium">
+                            {{ results|average_quiz_score|floatformat:1 }}%
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

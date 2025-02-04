@@ -1,0 +1,201 @@
+{% extends '../base.html' %}
+{% load static %}
+
+{% block title %}Admin Dashboard | LearnPeak - Learning Management System{% endblock %}
+
+{% block head %}
+<!-- Critical CSS -->
+<style>
+    .stat-card { @apply bg-white rounded-lg shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow; }
+    .stat-title { @apply text-base sm:text-lg font-semibold text-gray-900; }
+    .stat-value { @apply text-2xl sm:text-3xl font-bold text-gray-900 mt-2; }
+    .stat-subtitle { @apply text-xs sm:text-sm text-gray-600 mt-1; }
+    .action-button { @apply inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors; }
+    .dashboard-grid { @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4; }
+</style>
+<!-- Preload critical assets -->
+<link rel="preload" href="https://cdn.tailwindcss.com" as="style" crossorigin>
+<meta name="description" content="LearnPeak Admin Dashboard - Manage users, courses, and monitor system performance">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-gray-50" id="main-content">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <!-- Welcome Section -->
+        <section class="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-6" aria-labelledby="welcome-title">
+            <h1 id="welcome-title" class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Welcome, Administrator!</h1>
+            <p class="text-sm sm:text-base text-gray-600">Here's an overview of your learning platform.</p>
+        </section>
+
+        <!-- Quick Stats -->
+        <section class="dashboard-grid flex flex-row gap-4 overflow-x-auto mb-4 sm:mb-6" aria-label="Platform Statistics">
+            <article class="stat-card flex-1 min-w-[200px]">
+                <h2 class="stat-title">Total Users</h2>
+                <p class="stat-value">{{ total_users }}</p>
+                <p class="stat-subtitle">Active accounts</p>
+            </article>
+            <article class="stat-card flex-1 min-w-[200px]">
+                <h2 class="stat-title">Teachers</h2>
+                <p class="stat-value">{{ teacher_count }}</p>
+                <p class="stat-subtitle">Registered instructors</p>
+            </article>
+            <article class="stat-card flex-1 min-w-[200px]">
+                <h2 class="stat-title">Students</h2>
+                <p class="stat-value">{{ student_count }}</p>
+                <p class="stat-subtitle">Enrolled learners</p>
+            </article>
+            <article class="stat-card flex-1 min-w-[200px]">
+                <h2 class="stat-title">Courses</h2>
+                <p class="stat-value">{{ course_count }}</p>
+                <p class="stat-subtitle">Active courses</p>
+            </article>
+        </section>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <!-- User Management -->
+            <section class="lg:col-span-2 bg-white rounded-lg shadow-sm p-4 sm:p-6" aria-labelledby="user-management-title">
+                <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-2 sm:space-y-0">
+                    <h2 id="user-management-title" class="text-lg sm:text-xl font-bold text-gray-900">User Management</h2>
+                    <button type="button" 
+                            class="action-button w-full sm:w-auto"
+                            aria-label="Create new user">
+                        <span class="flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Create User
+                        </span>
+                    </button>
+                </header>
+                <div class="space-y-4">
+                    {% if recent_users %}
+                        {% for user in recent_users|slice:":3" %}
+                        <article class="border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-semibold text-gray-900">{{ user.email }}</h3>
+                                    <p class="text-sm text-gray-600">Joined: {{ user.date_joined|date:"M d, Y" }}</p>
+                                    <p class="text-xs text-gray-500">Role: 
+                                        {% if user.is_superuser %}Admin
+                                        {% elif user.teacher %}Teacher
+                                        {% else %}Student{% endif %}
+                                    </p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button type="button" 
+                                            class="text-sm text-gray-600 hover:text-gray-900"
+                                            aria-label="Edit {{ user.email }}">
+                                        Edit
+                                    </button>
+                                    <form method="POST" 
+                                          action="{% url 'LearnPeak:delete_user' user.id %}" 
+                                          class="inline"
+                                          onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                class="text-sm text-red-600 hover:text-red-900"
+                                                aria-label="Delete {{ user.email }}">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </article>
+                        {% endfor %}
+                        <div class="text-center mt-4">
+                            <a href="{% url 'LearnPeak:user_list' %}" 
+                               class="action-button">
+                                <span class="flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                    View All Users
+                                </span>
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-gray-600">No recent users</p>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- System Activity -->
+            <section class="bg-white rounded-lg shadow-sm p-4 sm:p-6" aria-labelledby="system-activity-title">
+                <h2 id="system-activity-title" class="text-lg sm:text-xl font-bold text-gray-900 mb-4">System Activity</h2>
+                {% if system_logs %}
+                    <div class="space-y-4">
+                        {% for log in system_logs %}
+                        <article class="border-b pb-4 last:border-b-0">
+                            <h3 class="font-medium text-gray-900">{{ log.action }}</h3>
+                            <p class="text-sm text-gray-600">{{ log.details }}</p>
+                            <time datetime="{{ log.timestamp|date:'Y-m-d H:i' }}" 
+                                  class="text-xs text-gray-500">
+                                {{ log.timestamp|date:"M d, Y H:i" }}
+                            </time>
+                        </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-600">No recent activity</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- Analytics Section -->
+        <section class="mt-4 sm:mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6" aria-label="Analytics">
+            <div class="lg:col-span-2 bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-4">Weekly Enrollments</h2>
+                <div class="h-64 bg-gray-50 rounded-lg">
+                    <!-- Placeholder for chart -->
+                    <div class="flex items-center justify-center h-full">
+                        <p class="text-gray-600">Enrollment data visualization</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-4">Quick Stats</h2>
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Active Today</dt>
+                        <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ active_users_today }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Course Categories</dt>
+                        <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ course_categories }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </section>
+    </div>
+</main>
+
+<!-- Notifications -->
+{% if messages %}
+<div class="fixed bottom-0 right-0 m-3 sm:m-6 z-50 w-full sm:w-auto max-w-sm" role="alert" aria-live="polite">
+    {% for message in messages %}
+    <div class="p-3 sm:p-4 rounded-md mb-2 {% if message.tags == 'success' %}bg-green-50 text-green-700{% else %}bg-red-50 text-red-700{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script defer>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle message dismissal
+        const messages = document.querySelectorAll('[role="alert"]');
+        messages.forEach(message => {
+            setTimeout(() => {
+                message.style.opacity = '0';
+                message.style.transition = 'opacity 0.5s ease-in-out';
+                setTimeout(() => message.remove(), 500);
+            }, 5000);
+        });
+    });
+</script>
+{% endblock %}

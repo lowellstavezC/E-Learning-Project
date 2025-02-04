@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Exam Result - {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold mb-6">{{ exam_result.student.user.name }}'s {{ exam.title }}</h1>
+        
+        <!-- Navigation breadcrumb -->
+        <div class="mb-6">
+            <div class="flex items-center space-x-4 text-sm">
+                <a href="{% url 'LearnPeak:course_detail' course.id %}" 
+                   class="text-gray-600 hover:text-gray-800">
+                    Course
+                </a>
+                <span class="text-gray-400">→</span>
+                <a href="{% url 'LearnPeak:exam_results_list' course.id exam.id %}"
+                   class="text-gray-600 hover:text-gray-800">
+                    Final Exam Results
+                </a>
+                <span class="text-gray-400">→</span>
+                <span class="font-semibold">Student Result</span>
+            </div>
+        </div>
+
+        <div class="space-y-4 mb-6">
+            <div class="p-4 bg-gray-50 rounded">
+                <p class="text-gray-600">Student:</p>
+                <p class="text-xl font-semibold">{{ exam_result.student.user.name }}</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded">
+                <p class="text-gray-600">Exam:</p>
+                <p class="text-xl font-semibold">{{ exam.title }}</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded">
+                <p class="text-gray-600">Score:</p>
+                <p class="text-xl font-semibold">{{ exam_result.score }}%</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded">
+                <p class="text-gray-600">Status:</p>
+                <p class="text-xl font-semibold {% if exam_result.passed %}text-green-600{% else %}text-red-600{% endif %}">
+                    {{ exam_result.passed|yesno:"Passed,Failed" }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Add this before the bottom navigation div -->
+        <div class="mt-6 p-6 bg-gray-50 rounded-lg">
+            <h2 class="text-xl font-semibold mb-4">Teacher Feedback</h2>
+            <form method="POST" action="{% url 'LearnPeak:grade_exam' course.id exam.id exam_result.id %}">
+                {% csrf_token %}
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Provide Feedback</label>
+                        <textarea name="feedback" rows="4" 
+                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            placeholder="Enter your feedback for the student...">{{ exam_result.teacher_feedback }}</textarea>
+                    </div>
+                    <div>
+                        <button type="submit" 
+                            class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                            Submit Feedback
+                        </button>
+                    </div>
+                </div>
+            </form>
+            
+            {% if exam_result.teacher_feedback %}
+            <div class="mt-4 p-4 bg-white rounded-lg">
+                <h3 class="font-medium text-gray-700 mb-2">Previous Feedback</h3>
+                <p class="text-gray-600">{{ exam_result.teacher_feedback }}</p>
+                <p class="text-sm text-gray-500 mt-2">Last updated: {{ exam_result.feedback_date|date:"F j, Y g:i A" }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Bottom navigation -->
+        <div class="mt-6 flex space-x-4">
+            <a href="{% url 'LearnPeak:exam_results_list' course.id exam.id %}" 
+               class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                ← Back to Final Exam Results
+            </a>
+            <a href="{% url 'LearnPeak:view_exam_results' course.id %}" 
+               class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                View Course Exam Results Overview
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %} 
